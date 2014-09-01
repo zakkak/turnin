@@ -1,11 +1,11 @@
-.TH turnin 1 "10 Oct 1993"
+.TH turnin 1 "1 Sept. 2014"
 .SH NAME
 .sp
 turnin \- CS turnin program
 .SH SYNOPSIS
 .sp
 .B turnin
-assignment@class file-and-directory-list
+assignment@class file1 [file2] [file3] [...]
 .sp
 .SH DESCRIPTION
 .sp
@@ -14,7 +14,7 @@ assignment@class file-and-directory-list
 is the standard command available for turning in Computer Science assignments.
 .LP
 .B NOTE:
-This command is currently only available under SunOS 5 systems in CS.
+This command is currently only available under the Debian Lab computers.
 .LP
 \fBHowever, check with your instructor or TA to be sure how you are supposed
 to turn in assignments for your particular class.\fR
@@ -25,20 +25,20 @@ to turn in assignments for your particular class.\fR
 Simply type
 .sp
 .ce
-\fBturnin assignmnt@class files-and-directories\fR
+\fBturnin assignment@class file1 [file2] [file3] [...]\fR
 .LP
 If you see a message
-\fICommand not found\fR, type \fI/usr/compsci/bin/turnin\fR instead
+\fICommand not found\fR, type \fI/usr/local/bin/turnin\fR instead
 of \fIturnin\fR.
 .LP
 .sp
 .I assignment
 and
 .I class
-are the assignment name (e.g. pgm1, lab3, hw2, etc) and turnin
-account name (e.g. cs22, cs130a).
-.I file-and-directory-list
-is the list of files and directories that you wish to turnin.
+are the assignment name (e.g. ask1, ask2, etc) and turnin
+account name (e.g. hy100, hy150b, etc.).
+.I file1,2,3
+are the files or folders you want to submit for this assignment.
 .LP
 The
 .B turnin
@@ -99,23 +99,25 @@ Occasionally you may find files beginning with '#'.  These represent
 failed turnins.
 .LP
 Turned-in assignments are named
-\fIuser\fR.tar.Z
+\fIuser\fR.tgz
 where user is the name of the user executing turnin.  Previous
 versions of each turnin are named
-\fIuser\fR-\fBN\fR.tar.Z
+\fIuser\fR-\fBN\fR.tgz
 where increasing \fBN\fR represents more recent versions.
 .LP
-To access a turnin of \fIpgm1\fR by \fIuser\fR,
+To access a turnin of \fIask1\fR by \fIcsd9999\fR,
 .IP
-cd TURNIN/pgm1
+cd ~/TURNIN/ask1
 .IP
 mkdir tmp
 .IP
 cd tmp
 .IP
-zcat ../user.tar.Z | tar xvBf -
+cp ../csd9999.tgz .
+.IP
+tar -vxf csd9999.tgz
 .LP
-which will unpack the students turned-in assignment.
+which will unpack the student's latest turned-in assignment.
 .sp
 .SH "RETURN VALUES"
 .sp
@@ -127,3 +129,4 @@ generates lots of error messages.
 .TP 20
 .B ~class/TURNIN/assignment/
 .PD
+
