@@ -37,7 +37,7 @@
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
- * bearing the name of the assignment (e.g.  ~cs162/TURNIN/pgm2).
+ * bearing the name of the assignment (e.g.  ~hy100/TURNIN/ask2).
  *
  * If the assignment directory contains the file 'LOCK' turnins will
  * not be accepted.
@@ -68,7 +68,7 @@
  *
  * As far as the user is concerned, the syntax is simply:
  *
- *		turnin  assignmt@class   files-and-directories
+ *		turnin  assignmt@class   file1 [file2] [file3] [...]
  */
 
 #define _XOPEN_SOURCE 600
