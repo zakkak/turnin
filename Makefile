@@ -1,5 +1,5 @@
 CC= gcc
-CFLAGS= -g
+CFLAGS= -O2 -Wall -Werror
 
 turnin4: turnin.o
 	$(CC) $(CFLAGS) turnin.o -o turnin

@@ -2,7 +2,7 @@
  * 1993 version of the turnin program originally written by Paul Eggert
  *
  * Rewritten October 1993 by probert@cs.ucsb.edu
- * 
+ *
  * Fixed Y2K bug in logging.  Andy Pippin <abp.cs.ucsb.edu>
  *
  * version 1.3: fix sprintf buffer overflow in writelog() - Jeff Sheltren <sheltren@cs.ucsb.edu>
@@ -10,7 +10,7 @@
  *
  * v1.4: change functionality to work with newer NFS versions - Jeff Sheltren <sheltren@cs.ucsb.edu>
  * Now, it works something like this:
- * su user tar cf - assignment | su class gzip > /tmp/file; mv /tmp/file ~class/TURNIN/assignment 
+ * su user tar cf - assignment | su class gzip > /tmp/file; mv /tmp/file ~class/TURNIN/assignment
  *
  * 2010-11-04  Bryce Boe <bboe@cs.ucsb.edu>
  *    - Fixed ".." and "." in project name bug.
@@ -19,6 +19,21 @@
  * 2013-02-15  Bryce Boe <bboe@cs.ucsb.edu>
  *    - Check for EOF on input prompts to fix 100% CPU zombie processes bug
  *    - Reuse `wanttocontinue` for "already submitted prompt"
+ *
+ * 2014-09-01 Foivos S. Zakkak <foivos@zakkak.net>
+ *    - Recursively check symlinks to get to the actual file
+ *    - Reduced use of strcpy
+ *    - Reduced attack surface
+ *    - Ignore signals at the beginning (can't get interrupted while privileged)
+ *    - Files renamed to *.tgz not *.tar.Z anymore
+ *    - Some comments
+ *    - isbinaryfile only checks for 0 since 0x80 results in false positives in
+ *      unicode
+ *    - Removed EQS define
+ *    - Rename shufflenames to movetar
+ *    - Add return type in functions
+ *    - Remove unused variables
+ *    - Fix Makefile
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -40,9 +55,9 @@
  * User files are saved in compressed tar images in the assignment
  * subdirectory.  The most recent version for each student is named
  *
- *		user.tar.Z
+ *		user.tgz
  *
- * previously turned versions are called user-N.tar.Z, where higher
+ * previously turned versions are called user-N.tgz, where higher
  * N refer to more recent turnins.  At most MAXTURNINS can be made
  * for each assignment.
  *
@@ -56,8 +71,10 @@
  *		turnin  assignmt@class   files-and-directories
  */
 
+#define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 #include <pwd.h>
 #include <unistd.h>
@@ -76,19 +93,18 @@
 
 #include <fcntl.h>
 
-void *malloc();
-
-#define EQS(s, t) (strcmp(s,t) == 0)
-
+#define MAX_USER_LENGTH 33   /* 32 +1 for \0 */
+#define MAX_PATH_LENGTH 4096
 
 /*
  * Global variables
  */
 char *turninversion = "1.4";
 
-char *rundir;
+char rundir[MAX_PATH_LENGTH];
+char user_name[MAX_USER_LENGTH];
+
 char *assignment, *class;
-char *user_name;
 int  class_uid, user_uid;
 
 char *finalfile;
@@ -102,7 +118,7 @@ int nfiles, nkbytes, nsymlinks;
 
 char *assignment_path, *tmp_assignment_path, *assignment_file, *tmp_assignment_file;
 int saveturnin;
-#define MAXFILENAME 64
+#define MAX_FILENAME_LENGTH 256
 
 char *tarcmd;
 char *compresscmd;
@@ -110,9 +126,9 @@ char *mvcmd;
 
 typedef struct fdescr {
 	char		  *f_name;
-	int			   f_flag;
+	int		   f_flag;
 	time_t		   f_mtime;
-	time_t		   f_size;
+	size_t		   f_size;
 	char		  *f_symlink;
 	struct fdescr *f_link;
 } Fdescr;
@@ -140,26 +156,21 @@ Fdescr *fileroot, *filenext;
 /*
  * get arguments: assignment, class, list of files-and-directories
  */
-usage()
-{
+void usage() {
 	fprintf(stderr, "Usage: turnin assignmt@class files-and-directories ...\n");
 	exit(1);
 }
 
-char *
-timestamp(clock)
-time_t clock;
-{
+char * timestamp(time_t clock) {
 	char *b = (char *) malloc(16);
 	struct tm *t = localtime(&clock);
 
 	sprintf(b, "%02d/%02d/%02d %02d:%02d", t->tm_mon+1, t->tm_mday, t->tm_year % 100,
-												t->tm_hour, t->tm_min);
+	        t->tm_hour, t->tm_min);
 	return b;
 }
 
-be_class()
-{
+void be_class() {
 	if (seteuid(0) == -1) {
 		perror("seteuid root");
 		exit(1);
@@ -172,49 +183,66 @@ be_class()
 	}
 }
 
-be_user()
-{
+void be_user() {
 	if (seteuid(0) == -1) {
 		perror("seteuid root");
 		exit(1);
 	}
 /*
-*/
+ */
 	if (seteuid(user_uid) == -1) {
 		perror("seteuid");
 		exit(1);
 	}
 }
 
-void
-setup(arg)
-char *arg;
-{
+void wanttocontinue() {
+	char b[10], c;
+
+	fprintf(stderr, "\n*** Do you want to continue? ");
+
+	if (fgets(b, sizeof(b)-1, stdin) == NULL)
+		exit(1);
+	c = tolower(b[0]);
+	while (c != 'y' && c != 'n') {
+		(void) clearerr(stdin);
+		fprintf(stderr, "\n*** Please enter 'y' or 'n'.\n");
+		fprintf(stderr, "\n*** Do you want to continue? ");
+		if (fgets(b, sizeof(b)-1, stdin) == NULL)
+			exit(1);
+		c = tolower(b[0]);
+	}
+	if (c == 'n') {
+		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
+		exit(1);
+	}
+}
+
+void setup(char *arg) {
 	struct passwd *pwd;
 	struct stat statb;
-	char buf[256], *p, *tmp_dir;
+	char buf[256], *p;
 	FILE *fd;
 
 	char keyword[256];
-	unsigned long n;
+	int n;
 	int i, warn;
 
+	/* Check if it was compiled/setup properly */
 	if (geteuid() != 0)
-		{fprintf(stderr, "turnin must be setuid.  Ask for help.\n"); exit(1);}
+	{
+		fprintf(stderr, "turnin must be setuid.  Ask for help.\n");
+		exit(1);
+	}
 
 	user_uid = getuid();
 
-	/* become *really* root */
-	if (setuid(0) == -1) perror("setuid(0)"), exit(2);
+	if (getlogin_r(user_name, MAX_USER_LENGTH) != 0) {
+		fprintf(stderr, "Cannot get user's login (uid %d)\n", user_uid);
+		exit(1);
+	}
 
-	pwd = getpwuid(user_uid);
-	if (!pwd)
-		{fprintf(stderr, "Cannot lookup user (uid %d)\n", user_uid); exit(1);}
-	user_name = strdup(pwd->pw_name);
-
-	be_user();
-	rundir = getcwd((char *)malloc(256), 256);
-	if (!rundir) {
+	if (!getcwd(rundir, MAX_PATH_LENGTH)) {
 		perror("getcwd");
 		exit(1);
 	}
@@ -222,20 +250,34 @@ char *arg;
 	assignment = arg;
 	class = strchr(assignment, '@');
 
-	if (!class) usage();
+	if (!class)
+		usage();
+
 	*class++ = '\0';
 
 	pwd = getpwnam(class);
-	if (!pwd)
-		{fprintf(stderr, "turnin: '%s' not valid\n", class); exit(1);}
+	if (!pwd) {
+		fprintf(stderr, "turnin: '%s' not valid\n", class);
+		exit(1);
+	}
 
 	class_uid = pwd->pw_uid;
-	if (!class_uid)
-		{fprintf(stderr, "turnin: Cannot turnin to root\n"); exit(2);}
 
-    /* assignment path is in the class' home directory */
+	if (!class_uid) {
+		fprintf(stderr, "turnin: Cannot turnin to root\n");
+		exit(1);
+	}
+
+	/* assignment path is in the class' home directory */
+	/* plus 2 is for adding the '/' and '\0' */
 	i = strlen(pwd->pw_dir) + strlen("/TURNIN/")  + strlen(assignment) + 2;
-	assignment_path = (char *)malloc(i + MAXFILENAME);
+
+	if ( i > (MAX_PATH_LENGTH - MAX_FILENAME_LENGTH) ) {
+		fprintf(stderr, "turnin: turnin path longer than %d\n", MAX_PATH_LENGTH);
+		exit(1);
+	}
+
+	assignment_path = (char *)malloc(i + MAX_FILENAME_LENGTH);
 	strcpy(assignment_path, pwd->pw_dir);
 	strcat(assignment_path, "/TURNIN/");
 	strcat(assignment_path, assignment);
@@ -244,20 +286,15 @@ char *arg;
 
 	/* To prevent ..(/folder) and .(/folder) this check was added -- bboe */
 	if (strstr(assignment_path, "./") != NULL) {
-	  fprintf(stderr, "turnin: \"..\" and \".\" not allowed in project name\n");
-	  exit(1);
+		fprintf(stderr, "turnin: \"..\" and \".\" not allowed in project name\n");
+		exit(1);
 	}
 
-    /* first, we will gzip out to tmp directory, then move it to class directory */
-    tmp_dir = (char *)malloc(strlen("/tmp"));
-    strcpy(tmp_dir, "/tmp");
-    /* we add 2 to this because 1 for the extra '/' added, the 2nd for ??? */
-	i = strlen(tmp_dir) + 2;
-	tmp_assignment_path = (char *)malloc(i + MAXFILENAME);
-	strcpy(tmp_assignment_path, tmp_dir);
-	strcat(tmp_assignment_path, "/");
-	tmp_assignment_file = tmp_assignment_path + i - 1;
-    free(tmp_dir);
+	/* 5 is the length of "/tmp/" + 1 for the \0 */
+	tmp_assignment_path = (char *)malloc(5 + MAX_FILENAME_LENGTH + 1);
+	strcpy(tmp_assignment_path, "/tmp/");
+	/* 5 is the length of "/tmp/" */
+	tmp_assignment_file = tmp_assignment_path + 5;
 
 	/*
 	 * Check on needed system commands
@@ -272,46 +309,67 @@ char *arg;
 	if (access("/bin/gzip", X_OK) == 0) {
 		compresscmd = "/bin/gzip";
 	} else {
-		fprintf(stderr, "Cannot find compress command\n");
+		fprintf(stderr, "Cannot find gzip command\n");
 		exit(1);
 	}
 
-	be_class();
-
 	assignment_file[0] = '.';
 	assignment_file[1] = 0;
+
+	/* checks for final (class) directory */
+	be_class();
+
 	if (lstat(assignment_path, &statb) == -1) {
 		perror(assignment_path);
 		exit(1);
 	}
-    /* checks for final (class) directory */
-	if (statb.st_uid != class_uid)
-		{fprintf(stderr, "%s not owned by %s.  ask for help.\n",
-											assignment_path, class); exit(1);}
-	if ((statb.st_mode & S_IFMT) != S_IFDIR)
-		{fprintf(stderr, "%s not a directory.  ask for help.\n",
-												assignment_path); exit(1);}
-	if ((statb.st_mode & S_IRWXU) != S_IRWXU)
-		{fprintf(stderr, "%s has bad mode. ask for help.\n",
-											assignment_path, class); exit(1);}
-	strcpy(assignment_file, "LOCK");
-	if (lstat(assignment_path, &statb) != -1) {
-		*assignment_file = 0;
-		fprintf(stderr, "Assignment directory locked: %s\n", assignment_path);
+
+	if (statb.st_uid != class_uid) {
+		fprintf(stderr, "%s not owned by %s.  ask for help.\n",
+		        assignment_path, class);
 		exit(1);
 	}
 
+	/* Is it a directory ? */
+	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
+		fprintf(stderr, "%s not a directory.  ask for help.\n",
+		        assignment_path);
+		exit(1);
+	}
+
+	/* Does the class have RWX permissions ? */
+	if ((statb.st_mode & S_IRWXU) != S_IRWXU) {
+		fprintf(stderr, "%s has bad mode. ask for help.\n",
+		        assignment_path);
+		exit(1);
+	}
+
+	/* Check if the assignment is locked */
+	strcpy(assignment_file, "LOCK");
+	if (lstat(assignment_path, &statb) != -1) {
+		*assignment_file = 0;
+		fprintf(stderr, "Assignment directory locked: %s. asked for help\n",
+		        assignment_path);
+		exit(1);
+	}
+
+	/* checks for tmp directory */
 	if (lstat(tmp_assignment_path, &statb) == -1) {
 		perror(tmp_assignment_path);
 		exit(1);
 	}
-    /* checks for temp directory */
-	if ((statb.st_mode & S_IFMT) != S_IFDIR)
-		{fprintf(stderr, "%s not a directory.  ask for help.\n",
-												tmp_assignment_path); exit(1);}
-	if ((statb.st_mode & S_IRWXU) != S_IRWXU)
-		{fprintf(stderr, "%s has bad mode. ask for help.\n",
-											tmp_assignment_path, class); exit(1);}
+	/* Is it a directory ? */
+	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
+		fprintf(stderr, "%s not a directory.  ask for help.\n",
+		        tmp_assignment_path);
+		exit(1);
+	}
+	/* Does the class have RWX permissions ? */
+	if ((statb.st_mode & S_IRWXU) != S_IRWXU) {
+		fprintf(stderr, "%s has bad mode. ask for help.\n",
+		        tmp_assignment_path);
+		exit(1);
+	}
 
 	/*
 	 * Check limits file
@@ -320,16 +378,20 @@ char *arg;
 	fd = fopen(assignment_path, "r");
 	if (fd) {
 		while (fgets(buf, sizeof(buf)-1, fd) == buf) {
-			if (p = strchr(buf, '#'))
+			if ( (p = strchr(buf, '#')) )
 				*p-- = 0;
 			else
 				p = buf + strlen(buf) - 1;
 
-			while (p >= buf && isspace(*p)) --p;
+			while (p >= buf && isspace(*p))
+				--p;
+
 			if (p == buf-1)
 				continue;
-			p[1] = 0;
 
+			p[1] = 0; /* Remove trailing spaces */
+
+			/* Remove spaces from the start */
 			for (p = buf;  *p && isspace(*p);  p++) ;
 
 			warn = 0;
@@ -347,7 +409,7 @@ char *arg;
 				warn = 1;
 			}
 			if (warn) {
-				fprintf(stderr,"Warning: undecipherable limits file\n");
+				fprintf(stderr,"Warning: undecipherable LIMITS file\n");
 				fprintf(stderr,"This is harmless, but mention to instructor\n");
 			}
 		}
@@ -361,19 +423,20 @@ char *arg;
 	strcpy(assignment_file, "README");
 	fd = fopen(assignment_path, "r");
 	if (fd) {
+		int c;
 		fprintf(stderr, "*************** README **************\n");
-		while (fgets(buf, sizeof(buf)-1, fd) == buf) {
-			fprintf(stderr, "%s", buf);
+		for (c = fgetc(fd); c != EOF; c = fgetc(fd)) {
+			putchar(c);
 		}
 		(void) fclose(fd);
 		wanttocontinue();
 	}
 
 	/*
- 	 * Check for multiple turnins
+	 * Check for multiple turnins
 	 */
 	strcpy(assignment_file, user_name);
-	strcat(assignment_file, ".tar.Z");
+	strcat(assignment_file, ".tgz");
 	finalfile = strdup(assignment_path);
 
 	if (lstat(finalfile, &statb) != -1) {
@@ -382,14 +445,14 @@ char *arg;
 
 		/* compute next version name */
 		for (saveturnin = 1;  saveturnin <= maxturnins;  saveturnin++) {
-			sprintf(assignment_file, "%s-%d.tar.Z", user_name, saveturnin);
+			sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
 			if (lstat(assignment_path, &statb) == -1)
 				break;
 		}
 
 		if (saveturnin == maxturnins) {
 			fprintf(stderr, "*** MAX TURNINS REACHED FOR %s (%d) ***\n",
-												assignment, maxturnins);
+			        assignment, maxturnins);
 			fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
 			exit(1);
 		}
@@ -398,9 +461,7 @@ char *arg;
 	be_user();
 }
 
-isbinaryfile(s)
-char *s;
-{
+int isbinaryfile(char *s) {
 	char buf[256];
 	char *p;
 	int n, f, c;
@@ -416,21 +477,92 @@ char *s;
 	while (n-- > 0) {
 		c = *p++ & 0xff;
 		if (c == 0) return 1;
-		if (c & 0x80) return 1;
+		/* The following works only for ascii. Not valid for
+		 * unicode */
+		/* if (c & 0x80) return 1; */
 	}
 
 	return 0;
 }
 
-addfile(s)
-char *s;
-{
+void check_symlink(char *s, Fdescr *f) {
+	char b[256], *p;
+	int m, bl;
+	struct stat statb;
+	int must_be_dir;
+
+	p = b + 255;
+	while (p >= b) *p-- = 0;
+
+	if (readlink(s, b, sizeof(b)) == -1) {
+		perror(s);
+		exit(1);
+	}
+	bl = strlen(b);
+
+	if (b[0] == '/') {
+		f->f_flag = F_ROOTED;
+		return;
+	}
+
+	if (bl > 1  &&  b[0] == '.'  &&  b[1] == '.'  && (!b[2] || b[2]=='/')) {
+		f->f_flag = F_DOTDOT;
+		return;
+	}
+	m = bl - 2;
+	for (p = strchr(b, '/');  p;  p = strchr(p+1, '/')) {
+		if (p - b > m)
+			break;
+		if (p[1] != '.' || p[2] != '.')
+			continue;
+		if (p[3] == 0 || p[3] == '/') {
+			/* have /..$  or /../ */
+			f->f_flag = F_DOTDOT;
+			return;
+		}
+	}
+
+	if (lstat(b, &statb) == -1) {
+		f->f_flag = F_NOEXIST;
+		return;
+	}
+
+	if (statb.st_uid != user_uid) {
+		f->f_flag = F_NOTOWNER;
+		return;
+	}
+
+	must_be_dir = 0;
+	/* Eat trailing slashes from directories */
+	while (bl > 1 && b[bl-1] == '/') {
+		b[bl-1] = 0;
+		bl--;
+		must_be_dir = 1;
+	}
+
+	if (must_be_dir && (statb.st_mode & S_IFMT) != S_IFDIR) {
+		f->f_flag = F_NOTDIR;
+		return;
+	}
+
+	if ((statb.st_mode & S_IFMT) == S_IFLNK) {
+		check_symlink(b, f);
+		return;
+	}
+
+	f->f_flag = F_SYMLINK;
+	f->f_symlink = strdup(b);
+	return;
+}
+
+void addfile(char *s) {
 	struct stat statb;
 	struct dirent *dp;
 	DIR *dirp;
 	Fdescr *f;
 	char *p, *t;
-	int n, sl, i, must_be_dir;
+	int n, sl, i;
+	int must_be_dir;
 
 	f = (Fdescr *) malloc(sizeof(Fdescr));
 	memset((void *)f, 0, sizeof(Fdescr));
@@ -445,6 +577,7 @@ char *s;
 	}
 
 	must_be_dir = 0;
+	/* Eat trailing slashes from directories */
 	while (sl > 1 && s[sl-1] == '/') {
 		s[sl-1] = 0;
 		sl--;
@@ -468,6 +601,7 @@ char *s;
 		return;
 	}
 
+	/* check for ".." in the path */
 	if (sl > 1  &&  s[0] == '.'  &&  s[1] == '.'  &&  (!s[2] || s[2]=='/')) {
 		f->f_flag = F_DOTDOT;
 		return;
@@ -475,29 +609,19 @@ char *s;
 
 	n = sl - 2;
 	for (p = strchr(s, '/');  p;  p = strchr(p+1, '/')) {
-			if (p - s > n)
-				break;
-			if (p[1] != '.' || p[2] != '.')
-				continue;
-			if (p[3] == 0 || p[3] == '/') {
-				/* have /..$  or /../ */
-				f->f_flag = F_DOTDOT;
-				return;
-			}
+		if (p - s > n)
+			break;
+		if (p[1] != '.' || p[2] != '.')
+			continue;
+		if (p[3] == 0 || p[3] == '/') {
+			/* have /..$  or /../ */
+			f->f_flag = F_DOTDOT;
+			return;
+		}
 	}
 
-	if (EQS(s, "core")) {
+	if (strcmp(s, "core") == 0) {
 		f->f_flag = F_COREFILE;
-		return;
-	}
-
-	if (EQS(s, "RCS")) {
-		f->f_flag = F_RCSFILE;
-		return;
-	}
-
-	if (s[sl-2] == ',' && s[sl-1] == 'v') {
-		f->f_flag = F_RCSFILE;
 		return;
 	}
 
@@ -524,7 +648,7 @@ char *s;
 				f->f_flag = F_OK;
 				f->f_mtime = statb.st_mtime;
 				f->f_size = statb.st_size;
-				}
+			}
 			else
 				f->f_flag = F_BINFILE;
 		else {
@@ -535,43 +659,9 @@ char *s;
 		return;
 	}
 
+	/* If the symlink links to a symlink recurse */
 	if ((statb.st_mode & S_IFMT) == S_IFLNK) {
-		char b[256], *p;
-		int x, m, bl;
-
-		p = b + 255;
-		while (p >= b) *p-- = 0;
-
-		if (readlink(s, b, sizeof(b)) == -1) {
-			perror(s);
-			exit(1);
-		}
-		bl = strlen(b);
-
-		if (b[0] == '/') {
-			f->f_flag = F_ROOTED;
-			return;
-		}
-
-		if (bl > 1  &&  b[0] == '.'  &&  b[1] == '.'  && (!b[2] || b[2]=='/')) {
-			f->f_flag = F_DOTDOT;
-			return;
-		}
-		m = bl - 2;
-		for (p = strchr(b, '/');  p;  p = strchr(p+1, '/')) {
-				if (p - b > m)
-					break;
-				if (p[1] != '.' || p[2] != '.')
-					continue;
-				if (p[3] == 0 || p[3] == '/') {
-					/* have /..$  or /../ */
-					f->f_flag = F_DOTDOT;
-					return;
-			}
-		}
-
-		f->f_flag = F_SYMLINK;
-		f->f_symlink = strdup(b);
+		check_symlink(s, f);
 		return;
 	}
 
@@ -590,7 +680,7 @@ char *s;
 
 	while ( (dp = readdir(dirp)) != NULL ) {
 		p = dp->d_name;
-		if (!EQS(p, ".") && !EQS(p, "..")) {
+		if (!(strcmp(p, ".") == 0) && !(strcmp(p, "..") == 0)) {
 			i =  sl + 1 + strlen(p) + 1;
 			t = (char *)malloc(i);
 			strcpy(t, s);
@@ -603,41 +693,17 @@ char *s;
 	(void) closedir(dirp);
 }
 
-wanttocontinue()
-{
-	char b[10], c;
-
-	fprintf(stderr, "\n*** Do you want to continue? ");
-
-	if (fgets(b, sizeof(b)-1, stdin) == NULL)
-		exit(1);
-	c = tolower(b[0]);
-	while (c != 'y' && c != 'n') {
-		(void) clearerr(stdin);
-		fprintf(stderr, "\n*** Please enter 'y' or 'n'.\n");
-		fprintf(stderr, "\n*** Do you want to continue? ");
-		if (fgets(b, sizeof(b)-1, stdin) == NULL)
-			exit(1);
-		c = tolower(b[0]);
-	}
-	if (c == 'n') {
-		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
-		exit(1);
-	}
-}
-
 /*
  * List all filenames that are to be excluded.
  * Return the number of files excluded.
  */
-warn_excludedfiles()
-{
+int warn_excludedfiles() {
 	Fdescr *fp;
-	char *msg = 0, *msg2;
+	char *msg = 0;
 	int first = 1;
 
 	for (fp = fileroot;  fp;  fp = fp->f_link) {
-	  switch (fp->f_flag) {
+		switch (fp->f_flag) {
 		case F_NOTFILE:  msg = "not a file, directory, or symlink"; break;
 		case F_BINFILE:  msg = "binary file"; break;
 		case F_TMPFILE:  msg = "temporary file"; break;
@@ -654,14 +720,14 @@ warn_excludedfiles()
 		case F_OK:		 msg = 0; break;
 		default:
 			fprintf(stderr, "INTERNAL ERROR: %d f_flag UNKNOWN\n", fp->f_flag);
-	  }
-	  if (msg) {
-		if (first) {
-			first = 0;
-			fprintf(stderr, "\n************** WARNINGS **************\n");
 		}
-		fprintf(stderr, "%s: NOT TURNED IN: %s\n", fp->f_name, msg);
-	  }
+		if (msg) {
+			if (first) {
+				first = 0;
+				fprintf(stderr, "\n************** WARNINGS **************\n");
+			}
+			fprintf(stderr, "%s: NOT TURNED IN: %s\n", fp->f_name, msg);
+		}
 	}
 	return !first;
 }
@@ -670,12 +736,9 @@ warn_excludedfiles()
  * Tally up the summary info
  * Return TRUE if limits exceeded or no available space.
  */
-int
-computesummaryinfo()
-{
+int computesummaryinfo() {
 	Fdescr *fp;
 	int fatal = 0;
-	int freekbytes;
 #ifdef SUNOS5
 	struct statvfs fsbuf;
 #endif
@@ -691,19 +754,19 @@ computesummaryinfo()
 
 	if (nfiles > maxfiles) {
 		fprintf(stderr,
-			"A maximum of %d files may be turned in for this assignment.\n",
-			maxfiles);
+		        "A maximum of %d files may be turned in for this assignment.\n",
+		        maxfiles);
 		fprintf(stderr,
-			"You are attempting to turn in %d files.\n", nfiles);
+		        "You are attempting to turn in %d files.\n", nfiles);
 		fatal++;
 	}
 
 	if (nkbytes > maxkbytes) {
 		fprintf(stderr,
-			"A maximum of %d Kbytes may be turned in for this assignment.\n",
-			maxkbytes);
+		        "A maximum of %d Kbytes may be turned in for this assignment.\n",
+		        maxkbytes);
 		fprintf(stderr,
-			"You are attempting to turn in %d Kbytes.\n", nkbytes);
+		        "You are attempting to turn in %d Kbytes.\n", nkbytes);
 		fatal++;
 	}
 
@@ -714,7 +777,7 @@ computesummaryinfo()
 		perror("statvfs");
 		fprintf(stderr, "WARNING: cannot check free space\n");
 		return fatal;
-	} 
+	}
 
 	freekbytes = (fsbuf.f_bfree*fsbuf.f_bsize/1024);
 	if (freekbytes < nkbytes) {
@@ -733,8 +796,7 @@ computesummaryinfo()
  * filename and modification date.  Make special notations for
  * symbolic links.
  */
-printverifylist()
-{
+void printverifylist() {
 	Fdescr *f;
 	int n = 0;
 	char *msg[2];
@@ -747,8 +809,8 @@ printverifylist()
 		if (f->f_flag != F_OK)
 			continue;
 		n++;
-		fprintf(stderr, "\t%2d: %s %6d  %s\n",
-							n, timestamp(f->f_mtime), f->f_size, f->f_name);
+		fprintf(stderr, "\t%2d: %s %6u  %s\n",
+		        n, timestamp(f->f_mtime), (unsigned int)f->f_size, f->f_name);
 	}
 
 	msg[0] = "\nThese are the symbolic links being turned in:\n";
@@ -771,14 +833,11 @@ printverifylist()
  */
 char *tempfile;
 
-maketar()
-{
-	struct utsname uts;
-	char *myname;
+void maketar() {
 	int ofd, pfd[2];
 	int childpid, childstat;
-	int	tarpid, tarstat;
-	int	comppid, compstat;
+	int tarpid, tarstat;
+	int comppid, compstat;
 	int failed;
 
 	char **targvp, **tvp;
@@ -786,9 +845,8 @@ maketar()
 
 	Fdescr *fp;
 
-
 	/*
- 	 * build the tar argument list
+	 * build the tar argument list
 	 */
 	tvp = targvp = (char **) malloc((3+nfiles+nsymlinks+1)*sizeof(char *));
 	tvp[0] = "tar";
@@ -803,22 +861,16 @@ maketar()
 			continue;
 		if (nleft-- < 0) {
 			fprintf(stderr, "FATAL ERROR at LINE %d\n", __LINE__);
-			exit(2);
+			exit(1);
 		}
 		*tvp++ = fp->f_name;
 	}
 	*tvp = 0;
 
 	/*
- 	 * setup tempfile name
+	 * setup tempfile name
 	 */
-	if (uname(&uts) == -1) {
-		perror("uname");
-		myname = "unknown";
-	} else
-		myname = uts.sysname;
-
-	sprintf(tmp_assignment_file, "#%s-%05d-%s", user_name, getpid(), myname);
+	sprintf(tmp_assignment_file, "#%s-%05d", user_name, getpid());
 	tempfile = strdup(tmp_assignment_path);
 
 	be_class();
@@ -828,7 +880,7 @@ maketar()
 		perror(tempfile);
 		fprintf(stderr, "Could not open temporary file: %s\n", tempfile);
 		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
-        unlink(tempfile);
+		unlink(tempfile);
 		exit(1);
 	}
 
@@ -865,7 +917,7 @@ maketar()
 				dup2(ofd, 1);
 				(void) close(ofd);
 			}
-			execl(compresscmd, "gzip", 0);
+			execl(compresscmd, "gzip", (char*)NULL);
 			perror(compresscmd);
 			_exit(1);
 		}
@@ -891,34 +943,30 @@ maketar()
 	(void) close(ofd);
 }
 
-/*
- * shuffle the names in the assignment directory
- */
-shufflenames()
-{
-	int x, bytes, mvpid, mvstat, failed;
+void movetar() {
+	int mvpid, mvstat;
 
-    mvcmd = "/bin/mv";
+	mvcmd = "/bin/mv";
 
-	sprintf(assignment_file, "%s.tar.Z", user_name);
+	sprintf(assignment_file, "%s.tgz", user_name);
 	finalfile = strdup(assignment_path);
 
 	be_class();
 
 	if (saveturnin) {
-		sprintf(assignment_file, "%s-%d.tar.Z", user_name, saveturnin);
-        /*
-		x = rename(finalfile, assignment_path);
-		if (x < 0) { perror("rename"); exit(1); }
-        */
+		sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
+		/*
+		  x = rename(finalfile, assignment_path);
+		  if (x < 0) { perror("rename"); exit(1); }
+		*/
 	}
 
-    /* can't use rename() over different file systems ie. /tmp -> /cs/class */
-    /*
-	x = rename(tempfile, finalfile);
-	if (x < 0) { perror("rename"); exit(1); }
-    */
-    /* mv file from temp location to final location */
+	/* can't use rename() over different file systems ie. /tmp -> /cs/class */
+	/*
+	  x = rename(tempfile, finalfile);
+	  if (x < 0) { perror("rename"); exit(1); }
+	*/
+	/* mv file from temp location to final location */
 	mvpid = fork();
 	if (!mvpid) {
 		execl(mvcmd, "mv", tempfile, assignment_path, NULL);
@@ -942,15 +990,14 @@ shufflenames()
  *		whichturnin,  user, date, time, number-of-files, user-directory
  *
  */
-writelog()
-{
-	char b[256];
+void writelog() {
+	char b[5120];
 	int fd, n, x;
 
 	time_t now = time(0);
 
-	snprintf(b, 256, "tv%s: %-8s %s %3d %s\n",
-		turninversion, user_name, timestamp(now), nfiles + nsymlinks, rundir);
+	snprintf(b, 5120, "tv%s: %-8s %s %3d %s\n",
+	         turninversion, user_name, timestamp(now), nfiles + nsymlinks, rundir);
 
 	n = strlen(b);
 
@@ -965,7 +1012,10 @@ writelog()
 	} else {
 		x = fsync(fd); if (x == -1) perror("fsync");
 
-		write(fd, b, n);
+		if ( write(fd, b, n) == -1 ) {
+			fprintf(stderr, "Failed to write log");
+			exit(1);
+		}
 
 		x = fsync(fd); if (x == -1) perror("fsync");
 		(void) close(fd);
@@ -974,15 +1024,23 @@ writelog()
 	be_user();
 }
 
-main(ac,av)
-char *av[];
-{
-	if (ac < 3) usage();
+int main(int argc, char* argv[]) {
+	if (argc < 3)
+		usage();
 
-	setup(av[1]);
+	/* Disable signals BEFORE we become class or root or whatever... */
+	(void) sigignore(SIGINT);
+	(void) sigignore(SIGTSTP);
+	(void) sigignore(SIGQUIT);
+	(void) sigignore(SIGHUP);
+	(void) sigignore(SIGTTIN);
+	(void) sigignore(SIGTTOU);
 
-	av += 2; ac -= 2;
-	while (ac--) addfile(*av++);
+	setup(argv[1]);
+
+	argv += 2; argc -= 2;
+	while (argc--)
+		addfile(*argv++);
 
 	if (warn_excludedfiles())
 		wanttocontinue();
@@ -998,35 +1056,20 @@ char *av[];
 	fprintf(stderr, "***************************************\n\n");
 	if (nsymlinks) {
 		fprintf(stderr, "%s %d+%d (files+symlinks) [%dKB] for %s to %s\n",
-				"You are about to turnin",
-			 	nfiles, nsymlinks, nkbytes, assignment, class);
+		        "You are about to turnin",
+		        nfiles, nsymlinks, nkbytes, assignment, class);
 	} else {
 		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
-				"You are about to turnin", nfiles, nkbytes, assignment, class);
+		        "You are about to turnin", nfiles, nkbytes, assignment, class);
 	}
 
 	wanttocontinue();
 
-	(void) sigignore(SIGINT);
-	(void) sigignore(SIGTSTP);
-	(void) sigignore(SIGQUIT);
-	(void) sigignore(SIGHUP);
-	(void) sigignore(SIGTTIN);
-	(void) sigignore(SIGTTOU);
-
 	maketar();
 
-	shufflenames();
+	movetar();
 	writelog();
 
 	fprintf(stderr,"\n*** TURNIN OF %s TO %s COMPLETE! ***\n",assignment,class);
 	exit(0);
 }
-
-#ifndef SUNOS5
-int
-sigignore(sig)
-{
-	signal(sig, SIG_IGN);
-}
-#endif
