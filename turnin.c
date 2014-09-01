@@ -99,7 +99,7 @@
 /*
  * Global variables
  */
-char *turninversion = "1.4";
+char *turninversion = "1.7";
 
 char rundir[MAX_PATH_LENGTH];
 char user_name[MAX_USER_LENGTH];
@@ -157,7 +157,7 @@ Fdescr *fileroot, *filenext;
  * get arguments: assignment, class, list of files-and-directories
  */
 void usage() {
-	fprintf(stderr, "Usage: turnin assignmt@class files-and-directories ...\n");
+	fprintf(stderr, "Usage: turnin assignmt@class file1 [file2] [file3] [...]\n");
 	exit(1);
 }
 
@@ -231,7 +231,7 @@ void setup(char *arg) {
 	/* Check if it was compiled/setup properly */
 	if (geteuid() != 0)
 	{
-		fprintf(stderr, "turnin must be setuid.  Ask for help.\n");
+		fprintf(stderr, "turnin must be setuid.  E-Mail sysadm@csd.uoc.gr with this error message.\n");
 		exit(1);
 	}
 
@@ -409,7 +409,7 @@ void setup(char *arg) {
 				warn = 1;
 			}
 			if (warn) {
-				fprintf(stderr,"Warning: undecipherable LIMITS file\n");
+				fprintf(stderr,"Warning: Could not read LIMITS file\n");
 				fprintf(stderr,"This is harmless, but mention to instructor\n");
 			}
 		}
