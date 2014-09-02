@@ -34,11 +34,8 @@
  *    - Add return type in functions
  *    - Remove unused variables
  *    - Fix Makefile
- *    - Change the way the user login is retrieved (getlogin_r)
  *
  * 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
- *    - Replace getlogin_r with cuserid in order to get the effective user's login
- *      instead of the user's owning the terminal the process runs in
  *    - Fixed Feature macros
  *    - Check for proper values in LIMITS
  *
@@ -102,15 +99,14 @@
 
 #include <fcntl.h>
 
-#define MAX_USER_LENGTH L_cuserid
 #define MAX_PATH_LENGTH 4096
 
 /*
  * Global variables
  */
-char *turninversion = "1.7";
+char *turninversion = "1.7pre";
 
-char user_name[MAX_USER_LENGTH];
+char *user_name;
 
 char *assignment, *class;
 int  class_uid, user_uid;
@@ -248,10 +244,21 @@ void setup(char *arg) {
 	/* get the user's login */
 	user_uid = getuid();
 
-	if (cuserid(user_name) != NULL) {
-		fprintf(stderr, "Cannot get user's login (uid %d)\n", user_uid);
+	/* become *really* root to query the user's login */
+	if (setuid(0) == -1) {
+		perror("setuid(0)");
+		exit(2);
+	}
+
+	pwd = getpwuid(user_uid);
+
+	if (!pwd) {
+		fprintf(stderr, "Cannot lookup user (uid %d)\n", user_uid);
 		exit(1);
 	}
+	user_name = strdup(pwd->pw_name);
+
+	be_user();
 
 	/* Search for @ in the first argument and split it there */
 	assignment = arg;
