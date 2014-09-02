@@ -38,6 +38,7 @@
  * 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
  *    - Fixed Feature macros
  *    - Check for proper values in LIMITS
+ *    - Use only tar (cjvf) for both the archiving and the compression
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -125,7 +126,6 @@ int saveturnin;
 #define MAX_FILENAME_LENGTH 256
 
 char *tarcmd;
-char *compresscmd;
 char *mvcmd;
 
 typedef struct fdescr {
@@ -317,13 +317,6 @@ void setup(char *arg) {
 		tarcmd = "/bin/tar";
 	else {
 		fprintf(stderr, "Cannot find tar command\n");
-		exit(1);
-	}
-
-	if (access("/bin/gzip", X_OK) == 0) {
-		compresscmd = "/bin/gzip";
-	} else {
-		fprintf(stderr, "Cannot find gzip command\n");
 		exit(1);
 	}
 
@@ -863,15 +856,14 @@ void printverifylist() {
 /*
  * make the tar image in a temporary file in the assignment directory.
  *
- *	su:user tar cpf - file-list | su:class compress  > tempfile in assignmentdir
+ * su:user tar cjvf - file-list | su:class tee tempfile > /dev/null in assignmentdir
  */
 char *tempfile;
 
 void maketar() {
-	int ofd, pfd[2];
+	int ofd;
 	int childpid, childstat;
 	int tarpid, tarstat;
-	int comppid, compstat;
 	int failed;
 
 	char **targvp, **tvp;
@@ -884,7 +876,7 @@ void maketar() {
 	 */
 	tvp = targvp = (char **) malloc((3+nfiles+nsymlinks+1)*sizeof(char *));
 	tvp[0] = "tar";
-	tvp[1] = "cvf";
+	tvp[1] = "cjvf";
 	tvp[2] = "-";
 	tvp += 3;
 
@@ -927,41 +919,20 @@ void maketar() {
 	childpid = fork();
 
 	if (!childpid) {	/* in child */
-		if (pipe(pfd) == -1) {perror("pipe"), exit(1);}
 
 		tarpid = fork();
 		if (!tarpid) {
-			if (pfd[1] != 1) {
-				dup2(pfd[1], 1);
-				(void) close(pfd[1]);
-			}
-			(void) close(pfd[0]);
-			execv(tarcmd, targvp);
-			perror("tarcmd");
-			_exit(1);
-		}
-		comppid = fork();
-		if (!comppid) {
-			if (pfd[0] != 0) {
-				dup2(pfd[0], 0);
-				(void) close(pfd[0]);
-			}
-			(void) close(pfd[1]);
 			if (ofd != 1) {
 				dup2(ofd, 1);
 				(void) close(ofd);
 			}
-			execl(compresscmd, "gzip", (char*)NULL);
-			perror(compresscmd);
+			execv(tarcmd, targvp);
+			perror("tarcmd");
 			_exit(1);
 		}
-		(void) close(pfd[0]);
-		(void) close(pfd[1]);
 
 		wait(&tarstat);
 		if (tarstat) failed = -1;
-		wait(&compstat);
-		if (compstat) failed = -1;
 		_exit(failed);
 	}
 	wait(&childstat);
