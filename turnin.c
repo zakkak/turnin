@@ -39,6 +39,10 @@
  *    - Fixed Feature macros
  *    - Check for proper values in LIMITS
  *    - Use only tar (cjvf) for both the archiving and the compression
+ *      Now, it works something like this:
+ *      su user tar cjf - assignment | su class tee ~class/TURNIN/as1 > /dev/null
+ *    - Write directly to the destination, don't use temp files and then move.
+ *      This comes at the cost of possible left overs in a case of a fail.
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -112,8 +116,6 @@ char *user_name;
 char *assignment, *class;
 int  class_uid, user_uid;
 
-char *finalfile;
-
 int maxfiles	=  100;
 int maxkbytes	= 1000;
 int maxturnins	=   10;
@@ -121,12 +123,11 @@ int binary	=    0;
 
 int nfiles, nkbytes, nsymlinks;
 
-char *assignment_path, *tmp_assignment_path, *assignment_file, *tmp_assignment_file;
+char *assignment_path, *assignment_file;
 int saveturnin;
 #define MAX_FILENAME_LENGTH 256
 
 char *tarcmd;
-char *mvcmd;
 
 typedef struct fdescr {
 	char		  *f_name;
@@ -304,12 +305,6 @@ void setup(char *arg) {
 		exit(1);
 	}
 
-	/* 5 is the length of "/tmp/" + 1 for the \0 */
-	tmp_assignment_path = (char *)malloc(5 + MAX_FILENAME_LENGTH + 1);
-	strcpy(tmp_assignment_path, "/tmp/");
-	/* 5 is the length of "/tmp/" */
-	tmp_assignment_file = tmp_assignment_path + 5;
-
 	/*
 	 * Check on needed system commands
 	 */
@@ -357,24 +352,6 @@ void setup(char *arg) {
 		*assignment_file = 0;
 		fprintf(stderr, "Assignment directory locked: %s. asked for help\n",
 		        assignment_path);
-		exit(1);
-	}
-
-	/* checks for tmp directory */
-	if (lstat(tmp_assignment_path, &statb) == -1) {
-		perror(tmp_assignment_path);
-		exit(1);
-	}
-	/* Is it a directory ? */
-	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
-		fprintf(stderr, "%s not a directory.  ask for help.\n",
-		        tmp_assignment_path);
-		exit(1);
-	}
-	/* Does the class have RWX permissions ? */
-	if ((statb.st_mode & S_IRWXU) != S_IRWXU) {
-		fprintf(stderr, "%s has bad mode. ask for help.\n",
-		        tmp_assignment_path);
 		exit(1);
 	}
 
@@ -464,9 +441,8 @@ void setup(char *arg) {
 	 */
 	strcpy(assignment_file, user_name);
 	strcat(assignment_file, ".tgz");
-	finalfile = strdup(assignment_path);
 
-	if (lstat(finalfile, &statb) != -1) {
+	if (lstat(assignment_path, &statb) != -1) {
 		fprintf(stderr, "\n\n*** You have already turned in %s\n", assignment);
 		wanttocontinue();
 
@@ -856,7 +832,7 @@ void printverifylist() {
 /*
  * make the tar image in a temporary file in the assignment directory.
  *
- * su:user tar cjvf - file-list | su:class tee tempfile > /dev/null in assignmentdir
+ * su:user tar cjf - file-list | su:class tee tempfile > /dev/null in assignmentdir
  */
 char *tempfile;
 
@@ -876,7 +852,7 @@ void maketar() {
 	 */
 	tvp = targvp = (char **) malloc((3+nfiles+nsymlinks+1)*sizeof(char *));
 	tvp[0] = "tar";
-	tvp[1] = "cjvf";
+	tvp[1] = "cjf";
 	tvp[2] = "-";
 	tvp += 3;
 
@@ -894,19 +870,22 @@ void maketar() {
 	*tvp = 0;
 
 	/*
-	 * setup tempfile name
+	 * setup the target name
 	 */
-	sprintf(tmp_assignment_file, "#%s-%05d", user_name, getpid());
-	tempfile = strdup(tmp_assignment_path);
+	if (saveturnin) {
+		sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
+	} else {
+		sprintf(assignment_file, "%s.tgz", user_name);
+	}
 
 	be_class();
-	ofd = open(tempfile, O_CREAT|O_EXCL|O_WRONLY, 0600);
+	ofd = open(assignment_path, O_CREAT|O_EXCL|O_WRONLY, 0600);
 
 	if (ofd == -1) {
-		perror(tempfile);
-		fprintf(stderr, "Could not open temporary file: %s\n", tempfile);
+		perror(assignment_path);
+		fprintf(stderr, "Could not open the final file: %s\n", assignment_path);
 		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
-		unlink(tempfile);
+		unlink(assignment_path);
 		exit(1);
 	}
 
@@ -941,52 +920,11 @@ void maketar() {
 		fprintf(stderr, "Subprocesses returned FAILED status: %x\n", childstat);
 		fprintf(stderr, "Contact instructor or TA\n");
 		(void) close(ofd);
-		unlink(tempfile);
+		unlink(assignment_path);
 		exit(1);
 	}
 
 	(void) close(ofd);
-}
-
-void movetar() {
-	int mvpid, mvstat;
-
-	mvcmd = "/bin/mv";
-
-	sprintf(assignment_file, "%s.tgz", user_name);
-	finalfile = strdup(assignment_path);
-
-	be_class();
-
-	if (saveturnin) {
-		sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
-		/*
-		  x = rename(finalfile, assignment_path);
-		  if (x < 0) { perror("rename"); exit(1); }
-		*/
-	}
-
-	/* can't use rename() over different file systems ie. /tmp -> /cs/class */
-	/*
-	  x = rename(tempfile, finalfile);
-	  if (x < 0) { perror("rename"); exit(1); }
-	*/
-	/* mv file from temp location to final location */
-	mvpid = fork();
-	if (!mvpid) {
-		execl(mvcmd, "mv", tempfile, assignment_path, NULL);
-		perror(mvcmd);
-		_exit(1);
-	}
-	wait(&mvstat);
-	if (mvstat) {
-		fprintf(stderr, "Move Subprocesses returned FAILED status: %x\n", mvstat);
-		fprintf(stderr, "Contact instructor or TA\n");
-		unlink(tempfile);
-		exit(1);
-	}
-
-	be_user();
 }
 
 /*
@@ -1072,7 +1010,6 @@ int main(int argc, char* argv[]) {
 
 	maketar();
 
-	movetar();
 	writelog();
 
 	fprintf(stderr,"\n*** TURNIN OF %s TO %s COMPLETE! ***\n",assignment,class);
