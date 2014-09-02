@@ -34,6 +34,13 @@
  *    - Add return type in functions
  *    - Remove unused variables
  *    - Fix Makefile
+ *    - Change the way the user login is retrieved (getlogin_r)
+ *
+ * 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
+ *    - Replace getlogin_r with cuserid in order to get the effective user's login
+ *      instead of the user's owning the terminal the process runs in
+ *    - Fixed Feature macros
+ *    - Check for proper values in LIMITS
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -71,7 +78,9 @@
  *		turnin  assignmt@class   file1 [file2] [file3] [...]
  */
 
-#define _XOPEN_SOURCE 600
+#define _BSD_SOURCE
+#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE_EXTENDED
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -93,7 +102,7 @@
 
 #include <fcntl.h>
 
-#define MAX_USER_LENGTH 33   /* 32 +1 for \0 */
+#define MAX_USER_LENGTH L_cuserid
 #define MAX_PATH_LENGTH 4096
 
 /*
@@ -101,7 +110,6 @@
  */
 char *turninversion = "1.7";
 
-char rundir[MAX_PATH_LENGTH];
 char user_name[MAX_USER_LENGTH];
 
 char *assignment, *class;
@@ -136,20 +144,20 @@ typedef struct fdescr {
 /*
  * f_flag values
  */
-#define F_OK		0
-#define F_NOTFILE	1
-#define F_BINFILE	2
-#define F_TMPFILE	3
-#define F_RCSFILE	4
-#define F_NOTOWNER	5
-#define F_DOTDOT	6
-#define F_ROOTED	7
-#define F_NOEXIST	8
-#define F_COREFILE	9
-#define F_PERM		10
-#define F_DIRECTORY	11
-#define F_NOTDIR	12
-#define F_SYMLINK	13
+#define F_OK        0
+#define F_NOTFILE   1
+#define F_BINFILE   2
+#define F_TMPFILE   3
+#define F_RCSFILE   4
+#define F_NOTOWNER  5
+#define F_DOTDOT    6
+#define F_ROOTED    7
+#define F_NOEXIST   8
+#define F_COREFILE  9
+#define F_PERM      10
+#define F_DIRECTORY 11
+#define F_NOTDIR    12
+#define F_SYMLINK   13
 
 Fdescr *fileroot, *filenext;
 
@@ -157,7 +165,7 @@ Fdescr *fileroot, *filenext;
  * get arguments: assignment, class, list of files-and-directories
  */
 void usage() {
-	fprintf(stderr, "Usage: turnin assignment@class file1 [file2] [file3] [...]\n");
+	fprintf(stderr, "Usage: turnin assignment@class file1 [file2 [...]]\n");
 	exit(1);
 }
 
@@ -231,22 +239,21 @@ void setup(char *arg) {
 	/* Check if it was compiled/setup properly */
 	if (geteuid() != 0)
 	{
-		fprintf(stderr, "turnin must be setuid.  E-Mail sysadm@csd.uoc.gr with this error message.\n");
+		fprintf(stderr,
+		        "turnin must be setuid.\n"
+		        " E-Mail sysadm@csd.uoc.gr with this error message.\n");
 		exit(1);
 	}
 
+	/* get the user's login */
 	user_uid = getuid();
 
-	if (getlogin_r(user_name, MAX_USER_LENGTH) != 0) {
+	if (cuserid(user_name) != NULL) {
 		fprintf(stderr, "Cannot get user's login (uid %d)\n", user_uid);
 		exit(1);
 	}
 
-	if (!getcwd(rundir, MAX_PATH_LENGTH)) {
-		perror("getcwd");
-		exit(1);
-	}
-
+	/* Search for @ in the first argument and split it there */
 	assignment = arg;
 	class = strchr(assignment, '@');
 
@@ -398,12 +405,32 @@ void setup(char *arg) {
 			if (sscanf(buf, "%s %d", keyword, &n) != 2) {
 				warn = 1;
 			} else if (strcasecmp(keyword, "maxfiles") == 0) {
+				if ( n<1 ) {
+					fprintf(stderr,
+					        "Error: maxfiles in the LIMITS file must be a non-zero positive value\n");
+					exit(1);
+				}
 				maxfiles = n;
 			} else if (strcasecmp(keyword, "maxkbytes") == 0) {
+				if ( n<1 ) {
+					fprintf(stderr,
+					        "Error: maxkbytes in the LIMITS file must be a non-zero positive value\n");
+					exit(1);
+				}
 				maxkbytes = n;
 			} else if (strcasecmp(keyword, "maxturnins") == 0) {
+				if ( n<1 ) {
+					fprintf(stderr,
+					        "Error: maxturnins in the LIMITS file must be a non-zero positive value\n");
+					exit(1);
+				}
 				maxturnins = n;
 			} else if (strcasecmp(keyword, "binary") == 0) {
+				if ( (n!=0) && (n!=1) ) {
+					fprintf(stderr,
+					        "Error: binary in the LIMITS file can only be 1 or 0\n");
+					exit(1);
+				}
 				binary = n;
 			} else {
 				warn = 1;
@@ -996,8 +1023,8 @@ void writelog() {
 
 	time_t now = time(0);
 
-	snprintf(b, 5120, "tv%s: %-8s %s %3d %s\n",
-	         turninversion, user_name, timestamp(now), nfiles + nsymlinks, rundir);
+	snprintf(b, 5120, "tv%s: %-8s %s %3d\n",
+	         turninversion, user_name, timestamp(now), nfiles + nsymlinks);
 
 	n = strlen(b);
 
