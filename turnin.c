@@ -38,11 +38,20 @@
  * 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
  *    - Fixed Feature macros
  *    - Check for proper values in LIMITS
- *    - Use only tar (cjvf) for both the archiving and the compression
+ *    - Use only tar (cjf) for both the archiving and the compression
  *      Now, it works something like this:
  *      su user tar cjf - assignment | su class tee ~class/TURNIN/as1 > /dev/null
  *    - Write directly to the destination, don't use temp files and then move.
  *      This comes at the cost of possible left overs in a case of a fail.
+ *    - Since the tar command is run by the user and not the class or the root
+ *      it can only access and archive files readable by the user.  That means
+ *      we don't need to check about these files.  We can let linux do all the
+ *      permission checking for us.  Under the same spirit we do not need to
+ *      worry about absolute and relative paths including ".." (CAUTION: this is
+ *      only regarding files to be submitted and not the assignment path under
+ *      TURNIN or the class name)
+ *      As a result check_symlinks is no longer needed.
+ *    - Introduce strict checks for file-paths for the assignment
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -166,6 +175,34 @@ void usage() {
 	exit(1);
 }
 
+/*
+ * Checks path for malicious tricks, such as escaped backspaces etc.
+ *
+ * FIXME: Only supports a subset of ASCII at the moment
+ */
+void check_assignment(char* s){
+	if (*s=='/') {
+		fprintf(stderr,
+		        "The assignment cannot be an absolute path. Please ask for help.\n");
+		exit(1);
+	}
+
+
+	for (; *s; s++) {
+		if ( !( (*s == ' ') ||
+		        (*s == '_') ||
+		        (*s == '-') ||
+		        (*s == '/') ||
+		        ((*s >= '0') && (*s <= '9')) ||
+		        ((*s >= 'a') && (*s <= 'z')) ||
+		        ((*s >= 'A') && (*s <= 'Z')) ) ) {
+			fprintf(stderr,
+			        "An assignment can include only ascii characters in [a-zA-Z0-9 /_-]\n");
+			exit(1);
+		}
+	}
+}
+
 char * timestamp(time_t clock) {
 	char *b = (char *) malloc(16);
 	struct tm *t = localtime(&clock);
@@ -270,9 +307,12 @@ void setup(char *arg) {
 
 	*class++ = '\0';
 
+	/* check assignment to make sure it is a valid path */
+	check_assignment(assignment);
+
 	pwd = getpwnam(class);
 	if (!pwd) {
-		fprintf(stderr, "turnin: '%s' not valid\n", class);
+		fprintf(stderr, "turnin: '%s' is not a valid course\n", class);
 		exit(1);
 	}
 
@@ -299,12 +339,6 @@ void setup(char *arg) {
 	strcat(assignment_path, "/");
 	assignment_file = assignment_path + i - 1;
 
-	/* To prevent ..(/folder) and .(/folder) this check was added -- bboe */
-	if (strstr(assignment_path, "./") != NULL) {
-		fprintf(stderr, "turnin: \"..\" and \".\" not allowed in project name\n");
-		exit(1);
-	}
-
 	/*
 	 * Check on needed system commands
 	 */
@@ -321,11 +355,13 @@ void setup(char *arg) {
 	/* checks for final (class) directory */
 	be_class();
 
+	/* Does it exist? */
 	if (lstat(assignment_path, &statb) == -1) {
 		perror(assignment_path);
 		exit(1);
 	}
 
+	/* Does class own this directory? */
 	if (statb.st_uid != class_uid) {
 		fprintf(stderr, "%s not owned by %s.  ask for help.\n",
 		        assignment_path, class);
@@ -339,7 +375,9 @@ void setup(char *arg) {
 		exit(1);
 	}
 
-	/* Does the class have RWX permissions ? */
+	/* Does the class have RWX permissions on the directory ?
+	 * We need read to check for old turnins. Write to turnin the new one and
+	 * Execute because it is a directory */
 	if ((statb.st_mode & S_IRWXU) != S_IRWXU) {
 		fprintf(stderr, "%s has bad mode. ask for help.\n",
 		        assignment_path);
@@ -350,7 +388,9 @@ void setup(char *arg) {
 	strcpy(assignment_file, "LOCK");
 	if (lstat(assignment_path, &statb) != -1) {
 		*assignment_file = 0;
-		fprintf(stderr, "Assignment directory locked: %s. asked for help\n",
+		fprintf(stderr,
+		        "Assignment directory locked: %s.\n"
+		        "Please contact the instructor or a TA\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -362,6 +402,7 @@ void setup(char *arg) {
 	fd = fopen(assignment_path, "r");
 	if (fd) {
 		while (fgets(buf, sizeof(buf)-1, fd) == buf) {
+			/* remove comments */
 			if ( (p = strchr(buf, '#')) )
 				*p-- = 0;
 			else
@@ -432,6 +473,7 @@ void setup(char *arg) {
 		for (c = fgetc(fd); c != EOF; c = fgetc(fd)) {
 			putchar(c);
 		}
+		fprintf(stderr, "*************************************\n");
 		(void) fclose(fd);
 		wanttocontinue();
 	}
@@ -488,83 +530,14 @@ int isbinaryfile(char *s) {
 	return 0;
 }
 
-void check_symlink(char *s, Fdescr *f) {
-	char b[256], *p;
-	int m, bl;
-	struct stat statb;
-	int must_be_dir;
-
-	p = b + 255;
-	while (p >= b) *p-- = 0;
-
-	if (readlink(s, b, sizeof(b)) == -1) {
-		perror(s);
-		exit(1);
-	}
-	bl = strlen(b);
-
-	if (b[0] == '/') {
-		f->f_flag = F_ROOTED;
-		return;
-	}
-
-	if (bl > 1  &&  b[0] == '.'  &&  b[1] == '.'  && (!b[2] || b[2]=='/')) {
-		f->f_flag = F_DOTDOT;
-		return;
-	}
-	m = bl - 2;
-	for (p = strchr(b, '/');  p;  p = strchr(p+1, '/')) {
-		if (p - b > m)
-			break;
-		if (p[1] != '.' || p[2] != '.')
-			continue;
-		if (p[3] == 0 || p[3] == '/') {
-			/* have /..$  or /../ */
-			f->f_flag = F_DOTDOT;
-			return;
-		}
-	}
-
-	if (lstat(b, &statb) == -1) {
-		f->f_flag = F_NOEXIST;
-		return;
-	}
-
-	if (statb.st_uid != user_uid) {
-		f->f_flag = F_NOTOWNER;
-		return;
-	}
-
-	must_be_dir = 0;
-	/* Eat trailing slashes from directories */
-	while (bl > 1 && b[bl-1] == '/') {
-		b[bl-1] = 0;
-		bl--;
-		must_be_dir = 1;
-	}
-
-	if (must_be_dir && (statb.st_mode & S_IFMT) != S_IFDIR) {
-		f->f_flag = F_NOTDIR;
-		return;
-	}
-
-	if ((statb.st_mode & S_IFMT) == S_IFLNK) {
-		check_symlink(b, f);
-		return;
-	}
-
-	f->f_flag = F_SYMLINK;
-	f->f_symlink = strdup(b);
-	return;
-}
-
 void addfile(char *s) {
 	struct stat statb;
 	struct dirent *dp;
 	DIR *dirp;
 	Fdescr *f;
+	char b[MAX_PATH_LENGTH];
 	char *p, *t;
-	int n, sl, i;
+	int sl, i;
 	int must_be_dir;
 
 	f = (Fdescr *) malloc(sizeof(Fdescr));
@@ -587,62 +560,33 @@ void addfile(char *s) {
 		must_be_dir = 1;
 	}
 
-	f->f_name = strdup(s);
-
-	if (*s == '/') {
-		f->f_flag = F_ROOTED;
-		return;
-	}
-
-	if (*s == '#') {
-		f->f_flag = F_TMPFILE;
-		return;
-	}
-
-	if (s[sl-1] == '~') {
-		f->f_flag = F_TMPFILE;
-		return;
-	}
-
-	/* check for ".." in the path */
-	if (sl > 1  &&  s[0] == '.'  &&  s[1] == '.'  &&  (!s[2] || s[2]=='/')) {
-		f->f_flag = F_DOTDOT;
-		return;
-	}
-
-	n = sl - 2;
-	for (p = strchr(s, '/');  p;  p = strchr(p+1, '/')) {
-		if (p - s > n)
-			break;
-		if (p[1] != '.' || p[2] != '.')
-			continue;
-		if (p[3] == 0 || p[3] == '/') {
-			/* have /..$  or /../ */
-			f->f_flag = F_DOTDOT;
-			return;
-		}
-	}
-
-	if (strcmp(s, "core") == 0) {
-		f->f_flag = F_COREFILE;
-		return;
-	}
-
-	if (lstat(s, &statb) == -1) {
-		f->f_flag = F_NOEXIST;
-		return;
-	}
-
-	if (statb.st_uid != user_uid) {
-		f->f_flag = F_NOTOWNER;
-		return;
-	}
-
+	/* sanity check, if it ends with a / it must be a directory */
 	if (must_be_dir && (statb.st_mode & S_IFMT) != S_IFDIR) {
 		f->f_flag = F_NOTDIR;
 		return;
 	}
 
+	f->f_name = strdup(s);
+
+	/* Ignore temporary files */
+	if ( (*s == '#') || (s[sl-1] == '~') ) {
+		f->f_flag = F_TMPFILE;
+		return;
+	}
+
+	/* Ignore core dumps */
+	if (strcmp(s, "core") == 0) {
+		f->f_flag = F_COREFILE;
+		return;
+	}
+
+	/* Check if it exists to prevent tar from crashing */
+	if (lstat(s, &statb) == -1) {
+		f->f_flag = F_NOEXIST;
+		return;
+	}
+
+	/* If it is a regular file (i.e. not a symlink or dir) */
 	if ((statb.st_mode & S_IFMT) == S_IFREG) {
 		if ((statb.st_mode & S_IRUSR) != S_IRUSR)
 			f->f_flag = F_PERM;
@@ -662,13 +606,25 @@ void addfile(char *s) {
 		return;
 	}
 
-	/* If the symlink links to a symlink recurse */
+	/* If is is a symlink get its target for printing purposes only */
 	if ((statb.st_mode & S_IFMT) == S_IFLNK) {
-		check_symlink(s, f);
+
+		/* zero out the bufer */
+		memset((void *)b, 0, sizeof(b));
+
+		/* get the link target in b */
+		if (readlink(s, b, sizeof(b)) == -1) {
+			perror(s);
+			exit(1);
+		}
+
+		f->f_flag = F_SYMLINK;
+		f->f_symlink = strdup(b);
 		return;
 	}
 
-	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
+	/* if it is not a regular file nor a symlink nor a directory */
+	if (!must_be_dir) {
 		f->f_flag = F_NOTFILE;
 		return;
 	}
@@ -683,6 +639,7 @@ void addfile(char *s) {
 
 	while ( (dp = readdir(dirp)) != NULL ) {
 		p = dp->d_name;
+		/* Ignore . and .. */
 		if (!(strcmp(p, ".") == 0) && !(strcmp(p, "..") == 0)) {
 			i =  sl + 1 + strlen(p) + 1;
 			t = (char *)malloc(i);
@@ -690,6 +647,7 @@ void addfile(char *s) {
 			strcat(t, "/");
 			strcat(t, p);
 			addfile(t);
+			free(t);
 		}
 	}
 
@@ -1001,9 +959,14 @@ int main(int argc, char* argv[]) {
 		fprintf(stderr, "%s %d+%d (files+symlinks) [%dKB] for %s to %s\n",
 		        "You are about to turnin",
 		        nfiles, nsymlinks, nkbytes, assignment, class);
-	} else {
+	} else if (nfiles) {
 		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
 		        "You are about to turnin", nfiles, nkbytes, assignment, class);
+	} else { /* if there are no files to submit */
+		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
+		        "You are about to turnin", nfiles, nkbytes, assignment, class);
+		fprintf(stderr, "turnin is aborting this submission as it is empty\n");
+		exit(1);
 	}
 
 	wanttocontinue();
