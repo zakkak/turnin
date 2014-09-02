@@ -157,7 +157,7 @@ Fdescr *fileroot, *filenext;
  * get arguments: assignment, class, list of files-and-directories
  */
 void usage() {
-	fprintf(stderr, "Usage: turnin assignmt@class file1 [file2] [file3] [...]\n");
+	fprintf(stderr, "Usage: turnin assignment@class file1 [file2] [file3] [...]\n");
 	exit(1);
 }
 
