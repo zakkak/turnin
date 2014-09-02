@@ -5,12 +5,14 @@
  *
  * Fixed Y2K bug in logging.  Andy Pippin <abp.cs.ucsb.edu>
  *
- * version 1.3: fix sprintf buffer overflow in writelog() - Jeff Sheltren <sheltren@cs.ucsb.edu>
- * Security flaw found by Stefan Karpinski <sgk@cs.ucsb.edu>
+ * v1.3: Jeff Sheltren <sheltren@cs.ucsb.edu>
+ *       Fix sprintf buffer overflow in writelog()
+ *       Security flaw found by Stefan Karpinski <sgk@cs.ucsb.edu>
  *
- * v1.4: change functionality to work with newer NFS versions - Jeff Sheltren <sheltren@cs.ucsb.edu>
- * Now, it works something like this:
- * su user tar cf - assignment | su class gzip > /tmp/file; mv /tmp/file ~class/TURNIN/assignment
+ * v1.4: Jeff Sheltren <sheltren@cs.ucsb.edu>
+ *       Change functionality to work with newer NFS versions
+ *       Now, it works something like this:
+ *       su user tar cf - assignment | su class gzip > /tmp/file; mv /tmp/file ~class/TURNIN/assignment
  *
  * 2010-11-04  Bryce Boe <bboe@cs.ucsb.edu>
  *    - Fixed ".." and "." in project name bug.
@@ -55,7 +57,7 @@
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
- * bearing the name of the assignment (e.g.  ~hy100/TURNIN/ask2).
+ * bearing the name of the assignment (e.g.  ~class/TURNIN/as2).
  *
  * If the assignment directory contains the file 'LOCK' turnins will
  * not be accepted.
@@ -183,7 +185,8 @@ void usage() {
 void check_assignment(char* s){
 	if (*s=='/') {
 		fprintf(stderr,
-		        "The assignment cannot be an absolute path. Please ask for help.\n");
+		        "turnin: The assignment cannot be an absolute path.\n"
+		        "        Please ask for help.\n");
 		exit(1);
 	}
 
@@ -197,7 +200,7 @@ void check_assignment(char* s){
 		        ((*s >= 'a') && (*s <= 'z')) ||
 		        ((*s >= 'A') && (*s <= 'Z')) ) ) {
 			fprintf(stderr,
-			        "An assignment can include only ascii characters in [a-zA-Z0-9 /_-]\n");
+			        "turnin: An assignment can include only ascii characters in [a-zA-Z0-9 /_-]\n");
 			exit(1);
 		}
 	}
@@ -274,8 +277,8 @@ void setup(char *arg) {
 	if (geteuid() != 0)
 	{
 		fprintf(stderr,
-		        "turnin must be setuid.\n"
-		        " E-Mail sysadm@csd.uoc.gr with this error message.\n");
+		        "turnin: turnin must be setuid.\n"
+		        "        Please report this issue to the system administrators.\n");
 		exit(1);
 	}
 
@@ -291,7 +294,7 @@ void setup(char *arg) {
 	pwd = getpwuid(user_uid);
 
 	if (!pwd) {
-		fprintf(stderr, "Cannot lookup user (uid %d)\n", user_uid);
+		fprintf(stderr, "turnin: Cannot lookup user (uid %d)\n", user_uid);
 		exit(1);
 	}
 	user_name = strdup(pwd->pw_name);
@@ -345,7 +348,7 @@ void setup(char *arg) {
 	if (access("/bin/tar", X_OK) == 0)
 		tarcmd = "/bin/tar";
 	else {
-		fprintf(stderr, "Cannot find tar command\n");
+		fprintf(stderr, "turnin: Cannot find tar command\n");
 		exit(1);
 	}
 
@@ -363,14 +366,14 @@ void setup(char *arg) {
 
 	/* Does class own this directory? */
 	if (statb.st_uid != class_uid) {
-		fprintf(stderr, "%s not owned by %s.  ask for help.\n",
+		fprintf(stderr, "turnin: %s not owned by %s.  ask for help.\n",
 		        assignment_path, class);
 		exit(1);
 	}
 
 	/* Is it a directory ? */
 	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
-		fprintf(stderr, "%s not a directory.  ask for help.\n",
+		fprintf(stderr, "turnin: %s not a directory.  ask for help.\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -379,7 +382,7 @@ void setup(char *arg) {
 	 * We need read to check for old turnins. Write to turnin the new one and
 	 * Execute because it is a directory */
 	if ((statb.st_mode & S_IRWXU) != S_IRWXU) {
-		fprintf(stderr, "%s has bad mode. ask for help.\n",
+		fprintf(stderr, "turnin: %s has bad mode. ask for help.\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -389,8 +392,8 @@ void setup(char *arg) {
 	if (lstat(assignment_path, &statb) != -1) {
 		*assignment_file = 0;
 		fprintf(stderr,
-		        "Assignment directory locked: %s.\n"
-		        "Please contact the instructor or a TA\n",
+		        "turnin: Assignment directory locked: %s.\n"
+		        "        Please contact the instructor or a TA\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -425,28 +428,28 @@ void setup(char *arg) {
 			} else if (strcasecmp(keyword, "maxfiles") == 0) {
 				if ( n<1 ) {
 					fprintf(stderr,
-					        "Error: maxfiles in the LIMITS file must be a non-zero positive value\n");
+					        "turnin: maxfiles in the LIMITS file must be a non-zero positive value\n");
 					exit(1);
 				}
 				maxfiles = n;
 			} else if (strcasecmp(keyword, "maxkbytes") == 0) {
 				if ( n<1 ) {
 					fprintf(stderr,
-					        "Error: maxkbytes in the LIMITS file must be a non-zero positive value\n");
+					        "turnin: maxkbytes in the LIMITS file must be a non-zero positive value\n");
 					exit(1);
 				}
 				maxkbytes = n;
 			} else if (strcasecmp(keyword, "maxturnins") == 0) {
 				if ( n<1 ) {
 					fprintf(stderr,
-					        "Error: maxturnins in the LIMITS file must be a non-zero positive value\n");
+					        "turnin: maxturnins in the LIMITS file must be a non-zero positive value\n");
 					exit(1);
 				}
 				maxturnins = n;
 			} else if (strcasecmp(keyword, "binary") == 0) {
 				if ( (n!=0) && (n!=1) ) {
 					fprintf(stderr,
-					        "Error: binary in the LIMITS file can only be 1 or 0\n");
+					        "turnin: binary in the LIMITS file can only be 1 or 0\n");
 					exit(1);
 				}
 				binary = n;
@@ -454,8 +457,9 @@ void setup(char *arg) {
 				warn = 1;
 			}
 			if (warn) {
-				fprintf(stderr,"Warning: Could not read LIMITS file\n");
-				fprintf(stderr,"This is harmless, but mention to instructor\n");
+				fprintf(stderr,
+				        "Warning: Could not read LIMITS file\n"
+				        "         This is harmless, but please mention to instructor\n");
 			}
 		}
 		(void) fclose(fd);
@@ -680,7 +684,7 @@ int warn_excludedfiles() {
 		case F_SYMLINK:  msg = 0; break;
 		case F_OK:		 msg = 0; break;
 		default:
-			fprintf(stderr, "INTERNAL ERROR: %d f_flag UNKNOWN\n", fp->f_flag);
+			fprintf(stderr, "turnin: INTERNAL ERROR: %d f_flag UNKNOWN\n", fp->f_flag);
 		}
 		if (msg) {
 			if (first) {
@@ -715,19 +719,19 @@ int computesummaryinfo() {
 
 	if (nfiles > maxfiles) {
 		fprintf(stderr,
-		        "A maximum of %d files may be turned in for this assignment.\n",
-		        maxfiles);
-		fprintf(stderr,
-		        "You are attempting to turn in %d files.\n", nfiles);
+		        "turnin: A maximum of %d files may be turned in for this assignment.\n"
+		        "        You are attempting to turn in %d files.\n",
+		        maxfiles,
+		        nfiles);
 		fatal++;
 	}
 
 	if (nkbytes > maxkbytes) {
 		fprintf(stderr,
-		        "A maximum of %d Kbytes may be turned in for this assignment.\n",
-		        maxkbytes);
-		fprintf(stderr,
-		        "You are attempting to turn in %d Kbytes.\n", nkbytes);
+		        "turnin: A maximum of %d Kbytes may be turned in for this assignment.\n"
+		        "        You are attempting to turn in %d Kbytes.\n",
+		        maxkbytes,
+		        nkbytes);
 		fatal++;
 	}
 
@@ -875,8 +879,10 @@ void maketar() {
 	wait(&childstat);
 
 	if (childstat) {
-		fprintf(stderr, "Subprocesses returned FAILED status: %x\n", childstat);
-		fprintf(stderr, "Contact instructor or TA\n");
+		fprintf(stderr,
+		        "turnin: Subprocesses returned FAILED status: %x\n"
+		        "        Contact instructor or TA\n",
+		        childstat);
 		(void) close(ofd);
 		unlink(assignment_path);
 		exit(1);
@@ -909,12 +915,12 @@ void writelog() {
 	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
 	if (fd == -1) {
 		perror(assignment_path);
-		fprintf(stderr, "WARNING:  Could not open assignment log file\n");
+		fprintf(stderr, "turnin Warning: Could not open assignment log file\n");
 	} else {
 		x = fsync(fd); if (x == -1) perror("fsync");
 
 		if ( write(fd, b, n) == -1 ) {
-			fprintf(stderr, "Failed to write log");
+			fprintf(stderr, "turnin: Failed to write log");
 			exit(1);
 		}
 
