@@ -997,7 +997,7 @@ void writelog() {
 
 	time_t now = time(0);
 
-	snprintf(b, 5120, "tv%s: %-8s %s %3d\n",
+	snprintf(b, 5120, "turnin %s: %-8s %s %3d\n",
 	         turninversion, user_name, timestamp(now), nfiles + nsymlinks);
 
 	n = strlen(b);
