@@ -1,5 +1,11 @@
-/*
- * Copyright 1993 Paul Eggert
+/*******************************************************************************
+ *
+ * Copyright 1993      Paul Eggert
+ * Copyright 1993      Dave Probert     <probert@cs.ucsb.edu>
+ * Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>
+ * Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>
+ * Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>
+ * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -14,6 +20,9 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ *******************************************************************************
+ *
+ * CHANGELOG:
  *
  * 1993 version of the turnin program originally written by Paul Eggert
  *
@@ -71,9 +80,16 @@
  *      As a result check_symlinks is no longer needed.
  *    - Introduce strict checks for file-paths for the assignment
  *
+ * 2014-09-03  Bryce Boe <bboe@cs.ucsb.edu>
+ *    - Add license notice
+ *
  * 2014-09-03 Foivos S. Zakkak <foivos@zakkak.net>
  *    - Let tar ignore backup and vcs files
  *    - Fix arguments of tar to gunzip and not bzip
+ *    - Extend licensing.  Add -V --version flags and add Copyright notices
+ *      with the contributors)
+ *
+ *******************************************************************************
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -109,7 +125,8 @@
  * As far as the user is concerned, the syntax is simply:
  *
  *    turnin  assignmt@class   file1 [file2] [file3] [...]
- */
+ *
+ ******************************************************************************/
 
 #define _BSD_SOURCE
 #define _XOPEN_SOURCE
@@ -140,7 +157,7 @@
 /*
  * Global variables
  */
-char *turninversion = "1.7pre";
+char *turninversion = "1.7";
 
 char *user_name;
 
@@ -193,9 +210,29 @@ Fdescr *fileroot, *filenext;
  * get arguments: assignment, class, list of files-and-directories
  */
 void usage() {
-	fprintf(stderr, "Usage: turnin assignment@class file1 [file2 [...]]\n");
+	fprintf(stderr, "Usage: turnin [-h|--help] [-V|--version] assignment@class file1 [file2 [...]]\n");
 	exit(1);
 }
+
+/*
+ * get arguments: assignment, class, list of files-and-directories
+ */
+void version() {
+	fprintf(stderr, "turnin %s\n\n"
+	        "Copyright 1993      Paul Eggert\n"
+	        "Copyright 1993      Dave Probert     <probert@cs.ucsb.edu>\n"
+	        "Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>\n"
+	        "Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>\n"
+	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
+	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net>\n\n"
+	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
+	        "This is free software: you are free to change and redistribute it.\n"
+	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
+	        "The source code is available at <https://github.com/zakkak/turnin>\n",
+	        turninversion);
+	exit(1);
+}
+
 
 /*
  * Checks path for malicious tricks, such as escaped backspaces etc.
@@ -948,7 +985,17 @@ void writelog() {
 }
 
 int main(int argc, char* argv[]) {
-	if (argc < 3)
+
+	if (argc > 1) {
+		if( strstr(argv[1], "-h") || strstr(argv[1], "--help"))
+		    usage();
+
+		if( strstr(argv[1], "-V") || strstr(argv[1], "--version"))
+		    version();
+
+		if (argc < 3)
+			usage();
+	} else
 		usage();
 
 	/* Disable signals BEFORE we become class or root or whatever... */
