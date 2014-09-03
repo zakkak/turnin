@@ -40,9 +40,9 @@
  * 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
  *    - Fixed Feature macros
  *    - Check for proper values in LIMITS
- *    - Use only tar (cjf) for both the archiving and the compression
+ *    - Use only tar (czf) for both the archiving and the compression
  *      Now, it works something like this:
- *      su user tar cjf - assignment | su class tee ~class/TURNIN/as1 > /dev/null
+ *      su user tar czf - assignment | su class tee ~class/TURNIN/as1 > /dev/null
  *    - Write directly to the destination, don't use temp files and then move.
  *      This comes at the cost of possible left overs in a case of a fail.
  *    - Since the tar command is run by the user and not the class or the root
@@ -54,6 +54,10 @@
  *      TURNIN or the class name)
  *      As a result check_symlinks is no longer needed.
  *    - Introduce strict checks for file-paths for the assignment
+ *
+ * 2014-09-03 Foivos S. Zakkak <foivos@zakkak.net>
+ *    - Let tar ignore backup and vcs files
+ *    - Fix arguments of tar to gunzip and not bzip
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
@@ -572,12 +576,6 @@ void addfile(char *s) {
 
 	f->f_name = strdup(s);
 
-	/* Ignore temporary files */
-	if ( (*s == '#') || (s[sl-1] == '~') ) {
-		f->f_flag = F_TMPFILE;
-		return;
-	}
-
 	/* Ignore core dumps */
 	if (strcmp(s, "core") == 0) {
 		f->f_flag = F_COREFILE;
@@ -794,7 +792,7 @@ void printverifylist() {
 /*
  * make the tar image in a temporary file in the assignment directory.
  *
- * su:user tar cjf - file-list | su:class tee tempfile > /dev/null in assignmentdir
+ * su:user tar czf - file-list | su:class tee tempfile > /dev/null in assignmentdir
  */
 char *tempfile;
 
@@ -812,11 +810,13 @@ void maketar() {
 	/*
 	 * build the tar argument list
 	 */
-	tvp = targvp = (char **) malloc((3+nfiles+nsymlinks+1)*sizeof(char *));
+	tvp = targvp = (char **) malloc((5+nfiles+nsymlinks+1)*sizeof(char *));
 	tvp[0] = "tar";
-	tvp[1] = "cjf";
-	tvp[2] = "-";
-	tvp += 3;
+	tvp[1] = "czf";
+	tvp[2] = "--exclude-backups";
+	tvp[3] = "--exclude-vcs";
+	tvp[4] = "-";
+	tvp += 5;
 
 	nleft = nfiles + nsymlinks;
 
