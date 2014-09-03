@@ -5,7 +5,7 @@
  * Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>
  * Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>
  * Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>
- * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net>
+ * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and DaKnOb
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -224,7 +224,7 @@ void version() {
 	        "Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>\n"
 	        "Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>\n"
 	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
-	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net>\n\n"
+	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and DaKnOb\n\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
@@ -515,7 +515,7 @@ void setup(char *arg) {
 			}
 			if (warn) {
 				fprintf(stderr,
-				        "Warning: Could not read LIMITS file\n"
+				        "Warning: Could not parse LIMITS file\n"
 				        "         This is harmless, but please mention to instructor\n");
 			}
 		}
