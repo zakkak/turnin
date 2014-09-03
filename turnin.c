@@ -1,4 +1,20 @@
 /*
+ * Copyright 1993 Paul Eggert
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *
  * 1993 version of the turnin program originally written by Paul Eggert
  *
  * Rewritten October 1993 by probert@cs.ucsb.edu
@@ -63,36 +79,36 @@
  * account.  For each assignment, a further subdirectory must be created
  * bearing the name of the assignment (e.g.  ~class/TURNIN/as2).
  *
- * If the assignment directory contains the file 'LOCK' turnins will
- * not be accepted.
+ * If the assignment directory contains the file 'LOCK' turnins will not be
+ * accepted.
  *
  * If there is a file 'LIMITS', it is examined for lines like:
  *
- *		maxfiles	100
- *		maxkbytes	1000
- *		maxturnins	10
- *		binary		1
+ *    maxfiles   100
+ *    maxkbytes  1000
+ *    maxturnins 10
+ *    binary     1
  *
- * which are used to modify the default values governing student turnins
- * of assignments (the default values are shown above).
+ * which are used to modify the default values governing student turnins of
+ * assignments (the default values are shown above).
  *
  * User files are saved in compressed tar images in the assignment
  * subdirectory.  The most recent version for each student is named
  *
- *		user.tgz
+ *    user.tgz
  *
  * previously turned versions are called user-N.tgz, where higher
  * N refer to more recent turnins.  At most MAXTURNINS can be made
  * for each assignment.
  *
- * If there is a file README in the turnin directory, it is printed
- * when the user runs turnin.
+ * If there is a file README in the turnin directory, it is printed when the
+ * user runs turnin.
  *
  * The file LOGFILE is appended for each turnin.
  *
  * As far as the user is concerned, the syntax is simply:
  *
- *		turnin  assignmt@class   file1 [file2] [file3] [...]
+ *    turnin  assignmt@class   file1 [file2] [file3] [...]
  */
 
 #define _BSD_SOURCE
