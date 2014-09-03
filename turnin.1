@@ -5,7 +5,7 @@ turnin \- Electronic assignment turn-in program
 .SH SYNOPSIS
 .sp
 .B turnin
-assignment@class file1 [file2] [file3] [...]
+[-h|--help] [-V|--version] assignment@class file1 [file2 [...]]
 .sp
 .SH DESCRIPTION
 .sp
@@ -35,15 +35,15 @@ of \fIturnin\fR.
 .I assignment
 and
 .I class
-are the assignment name (e.g. as1, as2, etc) and turnin
-account name (e.g. cs100, cs150b, etc.).
+are the assignment name (e.g., as1, as2, etc) and turnin
+account name (e.g., cs100, cs150b, etc.).
 .I file1,2,...
-are the files or folders you want to submit for this assignment.
+are the files and/or folders you want to submit for this assignment.
 .LP
 The
 .B turnin
-program might refuse to turn in binary files, and has other
-miscellaneous constraints which it announces as needed.
+program might refuse to turn in binary files (depending on the configuration),
+and has other miscellaneous constraints which it announces as needed.
 .LP
 You can make multiple turnins of each assignment (up to a limit), but
 you should follow the specific rules given by your instructor.
@@ -100,7 +100,7 @@ failed turnins.
 .LP
 Turned-in assignments are named
 \fIuser\fR-\fBN\fR.tgz
-where user is the name of the user executing turnin and increasing
+where \fIuser\fR is the name of the user executing turnin and increasing
 \fBN\fR represents more recent versions.
 A symlink named
 \fIuser\fR.tgz
