@@ -99,11 +99,12 @@ Occasionally you may find files beginning with '#'.  These represent
 failed turnins.
 .LP
 Turned-in assignments are named
-\fIuser\fR.tgz
-where user is the name of the user executing turnin.  Previous
-versions of each turnin are named
 \fIuser\fR-\fBN\fR.tgz
-where increasing \fBN\fR represents more recent versions.
+where user is the name of the user executing turnin and increasing
+\fBN\fR represents more recent versions.
+A symlink named
+\fIuser\fR.tgz
+points to the most recent version.
 .LP
 To access a turnin of \fIas1\fR by \fIuser9999\fR,
 .IP

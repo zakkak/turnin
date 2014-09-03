@@ -88,6 +88,9 @@
  *    - Fix arguments of tar to gunzip and not bzip
  *    - Extend licensing.  Add -V --version flags and add Copyright notices
  *      with the contributors)
+ *    - Number all turnins and Create a symlink user.tgz to the latest turnin
+ *    - Fix wrong argument order in tar command
+ *    - Fix directory turn-in (bug introduced in 2014-09-02)
  *
  *******************************************************************************
  *
@@ -141,6 +144,7 @@
 #include <time.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -157,32 +161,32 @@
 /*
  * Global variables
  */
-char *turninversion = "1.7";
+char *turninversion = "1.8";
 
 char *user_name;
 
 char *assignment, *class;
 int  class_uid, user_uid;
 
-int maxfiles	=  100;
-int maxkbytes	= 1000;
-int maxturnins	=   10;
-int binary	=    0;
+int maxfiles    =  100;
+int maxkbytes   = 1000;
+int maxturnins  =   10;
+int binary      =    0;
 
 int nfiles, nkbytes, nsymlinks;
 
 char *assignment_path, *assignment_file;
-int saveturnin;
+int saveturnin = 1;
 #define MAX_FILENAME_LENGTH 256
 
 char *tarcmd;
 
 typedef struct fdescr {
-	char		  *f_name;
-	int		   f_flag;
-	time_t		   f_mtime;
-	size_t		   f_size;
-	char		  *f_symlink;
+	char          *f_name;
+	int            f_flag;
+	time_t         f_mtime;
+	size_t         f_size;
+	char          *f_symlink;
 	struct fdescr *f_link;
 } Fdescr;
 
@@ -679,7 +683,7 @@ void addfile(char *s) {
 	}
 
 	/* if it is not a regular file nor a symlink nor a directory */
-	if (!must_be_dir) {
+	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
 		f->f_flag = F_NOTFILE;
 		return;
 	}
@@ -857,6 +861,7 @@ void maketar() {
 
 	char **targvp, **tvp;
 	int nleft;
+	char *target;
 
 	Fdescr *fp;
 
@@ -866,9 +871,9 @@ void maketar() {
 	tvp = targvp = (char **) malloc((5+nfiles+nsymlinks+1)*sizeof(char *));
 	tvp[0] = "tar";
 	tvp[1] = "czf";
-	tvp[2] = "--exclude-backups";
-	tvp[3] = "--exclude-vcs";
-	tvp[4] = "-";
+	tvp[2] = "-";
+	tvp[3] = "--exclude-backups";
+	tvp[4] = "--exclude-vcs";
 	tvp += 5;
 
 	nleft = nfiles + nsymlinks;
@@ -887,11 +892,7 @@ void maketar() {
 	/*
 	 * setup the target name
 	 */
-	if (saveturnin) {
-		sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
-	} else {
-		sprintf(assignment_file, "%s.tgz", user_name);
-	}
+	sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
 
 	be_class();
 	ofd = open(assignment_path, O_CREAT|O_EXCL|O_WRONLY, 0600);
@@ -942,6 +943,46 @@ void maketar() {
 	}
 
 	(void) close(ofd);
+
+
+	/* Create a symlink to the latest version */
+	/* 9 for the letters and the '\0' + max possible digits of savetrunin */
+	target = malloc( (9+10+strlen(user_name))*sizeof(char) );
+	sprintf(target, "../%s-%d.tgz", user_name, saveturnin);
+	sprintf(assignment_file, "%s.tgz", user_name);
+
+	be_class();
+
+	if ( symlink(target, assignment_path) != 0 ) {
+		if (errno == EEXIST) { /* If the link already exists remove it */
+			/* TODO assert it is a symlink */
+			if (unlink(assignment_path) != 0) {
+				fprintf(stderr,
+				        "turnin: Failed to delete symlink to latest turnin\n"
+				        "        Please notify the Instructor or a TA.\n");
+				perror("unlink");
+				exit(1);
+			/* after deletion retry */
+			} else if ( symlink(target, assignment_path) != 0 ) {
+				fprintf(stderr,
+				        "turnin: Failed to create symlink to latest turnin.\n"
+				        "        Please notify the Instructor or a TA.\n");
+				perror("symlink");
+				exit(1);
+			}
+		} else {
+			fprintf(stderr,
+			        "turnin: Failed to create symlink to latest turnin.\n"
+			        "        Please notify the Instructor or a TA.\n");
+			perror("symlink");
+			exit(1);
+		}
+	}
+
+	be_user();
+
+	free(target);
+
 }
 
 /*
