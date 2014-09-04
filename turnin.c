@@ -466,7 +466,7 @@ void setup(char *arg) {
 	fd = fopen(assignment_path, "r");
 	if (fd) {
 		while (fgets(buf, sizeof(buf)-1, fd) == buf) {
-			/* remove comments */
+			/* Ignore comments */
 			if ( (p = strchr(buf, '#')) )
 				*p-- = 0;
 			else
