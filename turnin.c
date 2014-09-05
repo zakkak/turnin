@@ -92,6 +92,10 @@
  *    - Fix wrong argument order in tar command
  *    - Fix directory turn-in (bug introduced in 2014-09-02)
  *
+ * 2014-09-05 Foivos S. Zakkak <foivos@zakkak.net>
+ *    - Ignore hidden files and folders
+ *    - Make sure the symlink to the latest turnin is a symlink before removing
+ *
  *******************************************************************************
  *
  * Instructor creates subdirectory TURNIN in home directory of the class
@@ -197,7 +201,7 @@ typedef struct fdescr {
 #define F_NOTFILE   1
 #define F_BINFILE   2
 #define F_TMPFILE   3
-#define F_RCSFILE   4
+#define F_HIDDEN    4
 #define F_NOTOWNER  5
 #define F_DOTDOT    6
 #define F_ROOTED    7
@@ -326,7 +330,7 @@ void wanttocontinue() {
 
 void setup(char *arg) {
 	struct passwd *pwd;
-	struct stat statb;
+	struct stat stat;
 	char buf[256], *p;
 	FILE *fd;
 
@@ -420,20 +424,20 @@ void setup(char *arg) {
 	be_class();
 
 	/* Does it exist? */
-	if (lstat(assignment_path, &statb) == -1) {
+	if (lstat(assignment_path, &stat) == -1) {
 		perror(assignment_path);
 		exit(1);
 	}
 
 	/* Does class own this directory? */
-	if (statb.st_uid != class_uid) {
+	if (stat.st_uid != class_uid) {
 		fprintf(stderr, "turnin: %s not owned by %s.  ask for help.\n",
 		        assignment_path, class);
 		exit(1);
 	}
 
 	/* Is it a directory ? */
-	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
+	if ((stat.st_mode & S_IFMT) != S_IFDIR) {
 		fprintf(stderr, "turnin: %s not a directory.  ask for help.\n",
 		        assignment_path);
 		exit(1);
@@ -442,7 +446,7 @@ void setup(char *arg) {
 	/* Does the class have RWX permissions on the directory ?
 	 * We need read to check for old turnins. Write to turnin the new one and
 	 * Execute because it is a directory */
-	if ((statb.st_mode & S_IRWXU) != S_IRWXU) {
+	if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
 		fprintf(stderr, "turnin: %s has bad mode. ask for help.\n",
 		        assignment_path);
 		exit(1);
@@ -450,7 +454,7 @@ void setup(char *arg) {
 
 	/* Check if the assignment is locked */
 	strcpy(assignment_file, "LOCK");
-	if (lstat(assignment_path, &statb) != -1) {
+	if (lstat(assignment_path, &stat) != -1) {
 		*assignment_file = 0;
 		fprintf(stderr,
 		        "turnin: Assignment directory locked: %s.\n"
@@ -549,14 +553,14 @@ void setup(char *arg) {
 	strcpy(assignment_file, user_name);
 	strcat(assignment_file, ".tgz");
 
-	if (lstat(assignment_path, &statb) != -1) {
+	if (lstat(assignment_path, &stat) != -1) {
 		fprintf(stderr, "\n\n*** You have already turned in %s\n", assignment);
 		wanttocontinue();
 
 		/* compute next version name */
 		for (saveturnin = 1;  saveturnin <= maxturnins;  saveturnin++) {
 			sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
-			if (lstat(assignment_path, &statb) == -1)
+			if (lstat(assignment_path, &stat) == -1)
 				break;
 		}
 
@@ -596,7 +600,7 @@ int isbinaryfile(char *s) {
 }
 
 void addfile(char *s) {
-	struct stat statb;
+	struct stat stat;
 	struct dirent *dp;
 	DIR *dirp;
 	Fdescr *f;
@@ -604,6 +608,7 @@ void addfile(char *s) {
 	char *p, *t;
 	int sl, i;
 	int must_be_dir;
+	char *tmp;
 
 	f = (Fdescr *) malloc(sizeof(Fdescr));
 	memset((void *)f, 0, sizeof(Fdescr));
@@ -626,7 +631,7 @@ void addfile(char *s) {
 	}
 
 	/* sanity check, if it ends with a / it must be a directory */
-	if (must_be_dir && (statb.st_mode & S_IFMT) != S_IFDIR) {
+	if (must_be_dir && (stat.st_mode & S_IFMT) != S_IFDIR) {
 		f->f_flag = F_NOTDIR;
 		return;
 	}
@@ -639,34 +644,40 @@ void addfile(char *s) {
 		return;
 	}
 
+	/* Ignore hidden files */
+	if (strchr(s, '.') == s) {
+		f->f_flag = F_HIDDEN;
+		return;
+	}
+
 	/* Check if it exists to prevent tar from crashing */
-	if (lstat(s, &statb) == -1) {
+	if (lstat(s, &stat) == -1) {
 		f->f_flag = F_NOEXIST;
 		return;
 	}
 
 	/* If it is a regular file (i.e. not a symlink or dir) */
-	if ((statb.st_mode & S_IFMT) == S_IFREG) {
-		if ((statb.st_mode & S_IRUSR) != S_IRUSR)
+	if ((stat.st_mode & S_IFMT) == S_IFREG) {
+		if ((stat.st_mode & S_IRUSR) != S_IRUSR)
 			f->f_flag = F_PERM;
 		else if (isbinaryfile(s))
 			if ( binary ) {
 				f->f_flag = F_OK;
-				f->f_mtime = statb.st_mtime;
-				f->f_size = statb.st_size;
+				f->f_mtime = stat.st_mtime;
+				f->f_size = stat.st_size;
 			}
 			else
 				f->f_flag = F_BINFILE;
 		else {
-			f->f_mtime = statb.st_mtime;
-			f->f_size = statb.st_size;
+			f->f_mtime = stat.st_mtime;
+			f->f_size = stat.st_size;
 			f->f_flag = F_OK;
 		}
 		return;
 	}
 
 	/* If is is a symlink get its target for printing purposes only */
-	if ((statb.st_mode & S_IFMT) == S_IFLNK) {
+	if ((stat.st_mode & S_IFMT) == S_IFLNK) {
 
 		/* zero out the bufer */
 		memset((void *)b, 0, sizeof(b));
@@ -683,12 +694,20 @@ void addfile(char *s) {
 	}
 
 	/* if it is not a regular file nor a symlink nor a directory */
-	if ((statb.st_mode & S_IFMT) != S_IFDIR) {
+	if ((stat.st_mode & S_IFMT) != S_IFDIR) {
 		f->f_flag = F_NOTFILE;
 		return;
 	}
 
+	/* Ignore hidden files */
+	tmp = strrchr(s, '/');
+	if ( tmp && (strchr(tmp, '.') == (tmp+1)) ) {
+		f->f_flag = F_HIDDEN;
+		return;
+	}
+
 	f->f_flag = F_DIRECTORY;
+
 
 	dirp = opendir(s);
 	if (!dirp) {
@@ -727,7 +746,7 @@ int warn_excludedfiles() {
 		case F_NOTFILE:  msg = "not a file, directory, or symlink"; break;
 		case F_BINFILE:  msg = "binary file"; break;
 		case F_TMPFILE:  msg = "temporary file"; break;
-		case F_RCSFILE:  msg = "RCS file or directory"; break;
+		case F_HIDDEN:   msg = "hidden file or folder"; break;
 		case F_NOTOWNER: msg = "not owned by user"; break;
 		case F_DOTDOT:   msg = "pathname contained '..'"; break;
 		case F_ROOTED:   msg = "only relative pathnames allowed"; break;
@@ -858,6 +877,7 @@ void maketar() {
 	int childpid, childstat;
 	int tarpid, tarstat;
 	int failed;
+	struct stat stat;
 
 	char **targvp, **tvp;
 	int nleft;
@@ -955,8 +975,19 @@ void maketar() {
 
 	if ( symlink(target, assignment_path) != 0 ) {
 		if (errno == EEXIST) { /* If the link already exists remove it */
-			/* TODO assert it is a symlink */
-			if (unlink(assignment_path) != 0) {
+			/* Check if it exists to prevent tar from crashing */
+			if (lstat(assignment_path, &stat) == -1) {
+				fprintf(stderr,
+				        "turnin: Error while checking Symlink to latest turnin!\n"
+				        "        Please notify the Instructor or a TA.\n");
+				exit(1);
+			} else if ((stat.st_mode & S_IFMT) != S_IFLNK) {
+				/* If it is not a symlink report an error */
+				fprintf(stderr,
+				        "turnin: Error with the symlink to the latest turnin!\n"
+				        "        Please notify the Instructor or a TA.\n");
+				exit(1);
+			} else if (unlink(assignment_path) != 0) {
 				fprintf(stderr,
 				        "turnin: Failed to delete symlink to latest turnin\n"
 				        "        Please notify the Instructor or a TA.\n");
