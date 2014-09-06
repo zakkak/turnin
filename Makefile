@@ -19,9 +19,10 @@
 
 CC= gcc
 CFLAGS= -O2 -Wall -Werror
+LDFLAGS= -lcrypto
 
-turnin4: turnin.o
-	$(CC) $(CFLAGS) turnin.o -o turnin
+turnin: turnin.o
+	$(CC) $(CFLAGS) turnin.o -o turnin $(LDFLAGS)
 
 install: turnin
 	rm -f $(DESTDIR)/usr/bin/turnin

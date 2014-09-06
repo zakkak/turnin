@@ -5,7 +5,8 @@
  * Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>
  * Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>
  * Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>
- * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and DaKnOb
+ * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and
+ *                     DaKnOb           <daknob@tolabaki.gr>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -75,7 +76,7 @@
  *      we don't need to check about these files.  We can let linux do all the
  *      permission checking for us.  Under the same spirit we do not need to
  *      worry about absolute and relative paths including ".." (CAUTION: this is
- *      only regarding files to be submitted and not the assignment path under
+ *      only regarding files to be turned in and not the assignment path under
  *      TURNIN or the class name)
  *      As a result check_symlinks is no longer needed.
  *    - Introduce strict checks for file-paths for the assignment
@@ -95,6 +96,13 @@
  * 2014-09-05 Foivos S. Zakkak <foivos@zakkak.net>
  *    - Ignore hidden files and folders
  *    - Make sure the symlink to the latest turnin is a symlink before removing
+ *
+ * 2014-09-06 Foivos S. Zakkak <foivos@zakkak.net>
+ *    - Completely remove SUNOS5 code
+ *    - Add sha256-digests of turnins at SHA256
+ *    - Replace the 5K static buffer in writelog with a dynamic one
+ *    - Improve prompts
+ *    - Reclaim some memory (free)
  *
  *******************************************************************************
  *
@@ -129,6 +137,8 @@
  *
  * The file LOGFILE is appended for each turnin.
  *
+ * The file SHA256 is appended for each turnin.
+ *
  * As far as the user is concerned, the syntax is simply:
  *
  *    turnin  assignmt@class   file1 [file2] [file3] [...]
@@ -152,11 +162,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef SUNOS5
-#include <sys/statvfs.h>
-#endif
 #include <sys/utsname.h>
 #include <sys/wait.h>
+
+#include <openssl/sha.h>
 
 #include <fcntl.h>
 
@@ -165,7 +174,7 @@
 /*
  * Global variables
  */
-char *turninversion = "1.8";
+char *turninversion = "1.9";
 
 char *user_name;
 
@@ -232,7 +241,8 @@ void version() {
 	        "Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>\n"
 	        "Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>\n"
 	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
-	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and DaKnOb\n\n"
+	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and\n"
+	        "                    DaKnOb           <daknob@tolabaki.gr>\n\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
@@ -309,7 +319,7 @@ void be_user() {
 void wanttocontinue() {
 	char b[10], c;
 
-	fprintf(stderr, "\n*** Do you want to continue? ");
+	fprintf(stderr, "*** Do you want to continue? ");
 
 	if (fgets(b, sizeof(b)-1, stdin) == NULL)
 		exit(1);
@@ -493,28 +503,32 @@ void setup(char *arg) {
 			} else if (strcasecmp(keyword, "maxfiles") == 0) {
 				if ( n<1 ) {
 					fprintf(stderr,
-					        "turnin: maxfiles in the LIMITS file must be a non-zero positive value\n");
+					        "turnin: maxfiles in the LIMITS file must be a non-zero positive value\n"
+					        "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				maxfiles = n;
 			} else if (strcasecmp(keyword, "maxkbytes") == 0) {
 				if ( n<1 ) {
 					fprintf(stderr,
-					        "turnin: maxkbytes in the LIMITS file must be a non-zero positive value\n");
+					        "turnin: maxkbytes in the LIMITS file must be a non-zero positive value\n"
+					        "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				maxkbytes = n;
 			} else if (strcasecmp(keyword, "maxturnins") == 0) {
 				if ( n<1 ) {
 					fprintf(stderr,
-					        "turnin: maxturnins in the LIMITS file must be a non-zero positive value\n");
+					        "turnin: maxturnins in the LIMITS file must be a non-zero positive value\n"
+					        "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				maxturnins = n;
 			} else if (strcasecmp(keyword, "binary") == 0) {
 				if ( (n!=0) && (n!=1) ) {
 					fprintf(stderr,
-					        "turnin: binary in the LIMITS file can only be 1 or 0\n");
+					        "turnin: binary in the LIMITS file can only be 1 or 0\n"
+					        "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				binary = n;
@@ -523,8 +537,8 @@ void setup(char *arg) {
 			}
 			if (warn) {
 				fprintf(stderr,
-				        "Warning: Could not parse LIMITS file\n"
-				        "         This is harmless, but please mention to instructor\n");
+				        "turnin: Could not parse LIMITS file\n"
+				        "        This is harmless, but please mention to instructor\n");
 			}
 		}
 		(void) fclose(fd);
@@ -554,9 +568,6 @@ void setup(char *arg) {
 	strcat(assignment_file, ".tgz");
 
 	if (lstat(assignment_path, &stat) != -1) {
-		fprintf(stderr, "\n\n*** You have already turned in %s\n", assignment);
-		wanttocontinue();
-
 		/* compute next version name */
 		for (saveturnin = 1;  saveturnin <= maxturnins;  saveturnin++) {
 			sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
@@ -564,12 +575,20 @@ void setup(char *arg) {
 				break;
 		}
 
-		if (saveturnin == maxturnins) {
-			fprintf(stderr, "*** MAX TURNINS REACHED FOR %s (%d) ***\n",
-			        assignment, maxturnins);
+		if (saveturnin > maxturnins) {
+			fprintf(stderr, "\n*** MAX (%d) TURNINS REACHED FOR %s ***\n",
+			        maxturnins, assignment);
 			fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
 			exit(1);
+		} else {
+			fprintf(stderr, "\n"
+			        "*** You have already turned in %s ***\n"
+			        "    You have %d more turnins!\n",
+			        assignment,
+			        maxturnins-saveturnin+1);
 		}
+
+		wanttocontinue();
 	}
 
 	be_user();
@@ -610,6 +629,7 @@ void addfile(char *s) {
 	int must_be_dir;
 	char *tmp;
 
+	/* FIXME: these are never freed */
 	f = (Fdescr *) malloc(sizeof(Fdescr));
 	memset((void *)f, 0, sizeof(Fdescr));
 
@@ -778,9 +798,6 @@ int warn_excludedfiles() {
 int computesummaryinfo() {
 	Fdescr *fp;
 	int fatal = 0;
-#ifdef SUNOS5
-	struct statvfs fsbuf;
-#endif
 
 	for (fp = fileroot;  fp;  fp = fp->f_link) {
 		if (fp->f_flag == F_SYMLINK)
@@ -809,23 +826,6 @@ int computesummaryinfo() {
 		fatal++;
 	}
 
-#ifdef SUNOS5
-	assignment_file[0] = '.';
-	assignment_file[1] = 0;
-	if (statvfs(assignment_path, &fsbuf) == -1) {
-		perror("statvfs");
-		fprintf(stderr, "WARNING: cannot check free space\n");
-		return fatal;
-	}
-
-	freekbytes = (fsbuf.f_bfree*fsbuf.f_bsize/1024);
-	if (freekbytes < nkbytes) {
-		fprintf(stderr, "Insufficient free space on class disk.\n");
-		fprintf(stderr, "Contact your instructor or TA.\n");
-		fatal++;
-	}
-#endif
-
 	return fatal;
 }
 
@@ -839,8 +839,9 @@ void printverifylist() {
 	Fdescr *f;
 	int n = 0;
 	char *msg[2];
+	char *time;
 
-	fprintf(stderr, "\nThese are the regular files being turned in:\n\n");
+	fprintf(stderr, "\n*** These are the regular files being turned in:\n\n");
 	fprintf(stderr, "\t    Last Modified   Size   Filename\n");
 	fprintf(stderr, "\t    -------------- ------  -------------------------\n");
 
@@ -848,8 +849,10 @@ void printverifylist() {
 		if (f->f_flag != F_OK)
 			continue;
 		n++;
+		time = timestamp(f->f_mtime);
 		fprintf(stderr, "\t%2d: %s %6u  %s\n",
-		        n, timestamp(f->f_mtime), (unsigned int)f->f_size, f->f_name);
+		        n, time, (unsigned int)f->f_size, f->f_name);
+		free(time);
 	}
 
 	msg[0] = "\nThese are the symbolic links being turned in:\n";
@@ -872,6 +875,9 @@ void printverifylist() {
  */
 char *tempfile;
 
+/*
+ * Creates the archive and a link to it.
+ */
 void maketar() {
 	int ofd;
 	int childpid, childstat;
@@ -952,10 +958,12 @@ void maketar() {
 	}
 	wait(&childstat);
 
+	free(targvp);
+
 	if (childstat) {
 		fprintf(stderr,
 		        "turnin: Subprocesses returned FAILED status: %x\n"
-		        "        Contact instructor or TA\n",
+		        "        Contact the instructor or TA\n",
 		        childstat);
 		(void) close(ofd);
 		unlink(assignment_path);
@@ -966,7 +974,7 @@ void maketar() {
 
 
 	/* Create a symlink to the latest version */
-	/* 9 for the letters and the '\0' + max possible digits of savetrunin */
+	/* 9 for the letters and the '\0' + max possible digits of saveturnin */
 	target = malloc( (9+10+strlen(user_name))*sizeof(char) );
 	sprintf(target, "../%s-%d.tgz", user_name, saveturnin);
 	sprintf(assignment_file, "%s.tgz", user_name);
@@ -1013,25 +1021,98 @@ void maketar() {
 	be_user();
 
 	free(target);
+}
 
+/*
+ * Convert the sha digest to a string
+ */
+char *sha2string (unsigned char sha[SHA256_DIGEST_LENGTH]) {
+	static char string[65]; // Effectively global
+    int i = 0;
+
+    for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+	    sprintf(string + (i * 2), "%02x", sha[i]);
+    }
+
+    string[64] = '\0';
+
+    return string;
+}
+
+/*
+ * Calculate the sha hash of the given file
+ */
+char *calculate_sha(char *filename) {
+	unsigned char  sha[SHA256_DIGEST_LENGTH];
+	FILE          *fd;
+	SHA256_CTX     sha256;
+	unsigned char *buf[1024];
+	int            rbytes;
+
+	fd = fopen(filename, "rb");
+	if (!fd) {
+		fprintf(stderr,
+		        "turnin: Failed to open turned in file '%s' for sha-digest.\n"
+		        "        Please notify the Instructor or a TA.\n",
+		        filename);
+		exit(1);
+	}
+
+	SHA256_Init(&sha256);
+
+	while((rbytes = fread(buf, 1, 1024, fd))) {
+		SHA256_Update(&sha256, buf, rbytes);
+	}
+
+	SHA256_Final(sha, &sha256);
+
+	fclose(fd);
+
+	return sha2string(sha);
 }
 
 /*
  * write the log entry
  *
- *		whichturnin,  user, date, time, number-of-files, user-directory
+ *  whichturnin, user, turnin number, date, time, number-of-files
  *
  */
 void writelog() {
-	char b[5120];
-	int fd, n, x;
+	char *log;
+	int   logl;
+	char  sha[94];              /* 10 for the format string
+	                             * 64 for the sha256
+	                             * 8 for the username
+	                             * 10 for the number of turnins
+	                             * 1 for '\0'
+	                             */
+	int   fd, x;
+	char *t;
 
-	time_t now = time(0);
+	t = timestamp(time(0));
 
-	snprintf(b, 5120, "turnin %s: %-8s %s %3d\n",
-	         turninversion, user_name, timestamp(now), nfiles + nsymlinks);
+	/* 14 for the format string
+	 * 8 for the username
+	 * 3 for the number of turnins
+	 * 3 for the number of files
+	 * 1 for '\0'
+	 */
+	logl = 14 + strlen(turninversion) + 8 + 3 + strlen(t) + 3 + 1;
+	log  = malloc(logl*sizeof(char));
+	snprintf(log, logl,
+	         "turnin %s: %-8s-%3d %s %3d\n",
+	         turninversion, user_name, saveturnin, t,
+	         nfiles + nsymlinks);
 
-	n = strlen(b);
+	free(t);
+
+	/* Get the path of the last turnin */
+	sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
+
+	snprintf(sha, 94,
+	         "%64s %s-%d.tgz\n",
+	         calculate_sha(assignment_path),
+	         user_name, saveturnin);
 
 	strcpy(assignment_file, "LOGFILE");
 
@@ -1044,7 +1125,7 @@ void writelog() {
 	} else {
 		x = fsync(fd); if (x == -1) perror("fsync");
 
-		if ( write(fd, b, n) == -1 ) {
+		if ( write(fd, log, strlen(log)) == -1 ) {
 			fprintf(stderr, "turnin: Failed to write log");
 			exit(1);
 		}
@@ -1053,7 +1134,27 @@ void writelog() {
 		(void) close(fd);
 	}
 
+	strcpy(assignment_file, "SHA256");
+
+	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
+	if (fd == -1) {
+		perror(assignment_path);
+		fprintf(stderr, "turnin Warning: Could not open assignment sha256 file\n");
+	} else {
+		x = fsync(fd); if (x == -1) perror("fsync");
+
+		if ( write(fd, sha, strlen(sha)) == -1 ) {
+			fprintf(stderr, "turnin: Failed to write sha256");
+			exit(1);
+		}
+
+		x = fsync(fd); if (x == -1) perror("fsync");
+		(void) close(fd);
+	}
+
 	be_user();
+
+	free(log);
 }
 
 int main(int argc, char* argv[]) {
@@ -1103,7 +1204,7 @@ int main(int argc, char* argv[]) {
 	} else if (nfiles) {
 		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
 		        "You are about to turnin", nfiles, nkbytes, assignment, class);
-	} else { /* if there are no files to submit */
+	} else { /* if there are no files to turnin */
 		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
 		        "You are about to turnin", nfiles, nkbytes, assignment, class);
 		fprintf(stderr, "turnin is aborting this submission as it is empty\n");
@@ -1115,6 +1216,9 @@ int main(int argc, char* argv[]) {
 	maketar();
 
 	writelog();
+
+	// Free memory
+	free(assignment_path);
 
 	fprintf(stderr,"\n*** TURNIN OF %s TO %s COMPLETE! ***\n",assignment,class);
 	exit(0);

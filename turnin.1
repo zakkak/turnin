@@ -1,4 +1,4 @@
-.TH turnin 1 "1 Sept. 2014"
+.TH turnin 1 "6 Sept. 2014"
 .SH NAME
 .sp
 turnin \- Electronic assignment turn-in program
@@ -14,7 +14,8 @@ turnin \- Electronic assignment turn-in program
 is the standard command available for turning in electronic assignments.
 .LP
 .B NOTE:
-This command is currently only available under the Debian Lab computers.
+This command is currently only available under the department's
+computer infrastructure.
 .LP
 \fBHowever, check with your instructor or TA to be sure how you are supposed
 to turn in assignments for your particular class.\fR
@@ -76,6 +77,12 @@ will disable turnins of the particular assignment.
 .LP
 .B LOGFILE
 keeps tracks of each turnin.
+.LP
+.B SHA256
+keeps the sha256 digest of each turnin.
+To check the integrity of the turnins issue:
+.IP
+sha256 -c SHA256
 .LP
 .B LIMITS
 contains lines which specify keywords and values:
