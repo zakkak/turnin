@@ -16,7 +16,7 @@ instructions for both professors and students.
 The program was first written in 1993 and then updated to fix some bugs or security flaws. The original
 repository can be found <a href="https://github.com/ucsb-cs/turnin">here</a>. It has been created for 
 SunOS 5 but then with updates it was able to run in modern operating systems like debian as well. On
-September 1st, Foivos S. Zakkak and Antonios A. Chariton (zakkak & DaKnOb) forked the original repository
+September 1st, 2014, Foivos S. Zakkak and Antonios A. Chariton (zakkak & DaKnOb) forked the original repository
 and created a new version of ```turnin``` that is more secure (it patches several exploitable vulnerabilities
 found in the original code, minimizes attack surface), faster and with partly extended functionality. A few
 days later, both projects went under the GPL v3 License after contacting all the authors and agreeing to it.
