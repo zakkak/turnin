@@ -12,7 +12,7 @@ files in this repository and run ```make;make install;make clean```. This series
 compile, place and activate the ```turnin``` binary. It will also create a ```man(1)``` entry with further 
 instructions for both professors and students. 
 <br/>
-<h2>History of ```turnin```</h2>
+<h2>History</h2>
 The program was first written in 1993 and then updated to fix some bugs or security flaws. The original
 repository can be found <a href="https://github.com/ucsb-cs/turnin">here</a>. It has been created for 
 SunOS 5 but then with updates it was able to run in modern operating systems like debian as well. On
