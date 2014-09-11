@@ -242,7 +242,7 @@ void version() {
 	        "Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>\n"
 	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
 	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and\n"
-	        "                    DaKnOb           <daknob@tolabaki.gr>\n\n"
+	        "                    Antonios Chariton<daknob@tolabaki.gr>\n\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
@@ -352,7 +352,7 @@ void setup(char *arg) {
 	if (geteuid() != 0)
 	{
 		fprintf(stderr,
-		        "turnin: turnin must be setuid.\n"
+		        "turnin: turnin must be compiled and installed as root.\n"
 		        "        Please report this issue to the system administrators.\n");
 		exit(1);
 	}
