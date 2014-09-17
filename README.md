@@ -8,7 +8,7 @@ A set of unix computers is required that both classes and students have access t
 Each class has a home directory and it can create a folder named ```TURNIN```. If this folder is available
 then other unix accounts can submit to it. In order to create an assignment, i.e. Homework1, the class has to create
 a folder inside the ```TURNIN``` folder with the name ```Homework1```. The ```root``` user needs to download all
-files in this repository and run ```make;make install;make clean```. This series of ```bash(1)``` commands will 
+files in this repository and run ```make;make install;make clean```. Please note that this cannot be done with ```sudo(8)``` and needs access to the actual root user. This series of ```bash(1)``` commands will 
 compile, place and activate the ```turnin``` binary. It will also create a ```man(1)``` entry with further 
 instructions for both professors and students. 
 <br/>
