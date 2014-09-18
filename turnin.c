@@ -6,7 +6,7 @@
  * Copyright 2000-2010 Jeff Sheltren    <sheltren@cs.ucsb.edu>
  * Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>
  * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and
- *                     DaKnOb           <daknob@tolabaki.gr>
+ *                     Antonios Chariton<daknob@tolabaki.gr>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
