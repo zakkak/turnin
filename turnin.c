@@ -103,6 +103,8 @@
  *    - Replace the 5K static buffer in writelog with a dynamic one
  *    - Improve prompts
  *    - Reclaim some memory (free)
+ * 2014-09-18 Antonios A. Chariton <daknob@tolabaki.gr>
+ *    - Fix a problem that made SHA-256 calculation impossible
  *
  *******************************************************************************
  *
