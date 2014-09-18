@@ -1087,6 +1087,7 @@ void writelog() {
 	                             * 8 for the username
 	                             * 10 for the number of turnins
 	                             * 1 for '\0'
+	                             * +1 to make it even
 	                             */
 	int   fd, x;
 	char *t;
@@ -1114,7 +1115,7 @@ void writelog() {
 	be_class(); /* Be class before calculating the hash */
 
 	snprintf(sha, 94,
-	         "%64s %s-%d.tgz\n",
+	         "%64s %8s-%d.tgz\n",
 	         calculate_sha(assignment_path),
 	         user_name, saveturnin);
 
