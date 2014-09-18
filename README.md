@@ -12,7 +12,7 @@ files in this repository and run ```make;make install;make clean```. Please note
 compile, place and activate the ```turnin``` binary. It will also create a ```man(1)``` entry with further 
 instructions for both professors and students.
 <h3>Requirements</h3>
-* ```git```
+* ```git``` (To get ```turnin```)
 * ```gcc```
 * ```make```
 * ```tar```
