@@ -12,11 +12,11 @@ files in this repository and run ```make;make install;make clean```. Please note
 compile, place and activate the ```turnin``` binary. It will also create a ```man(1)``` entry with further 
 instructions for both professors and students.
 <h3>Requirements</h3>
-* ```git``` (To get ```turnin```)
 * ```gcc```
 * ```make```
 * ```tar```
 * ```libssl-dev``` on debian
+* ```git``` (For download and updates)
 <br/>
 <h2>History</h2>
 The program was first written in 1993 and then updated to fix some bugs or security flaws. The original
