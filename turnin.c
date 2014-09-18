@@ -1109,6 +1109,8 @@ void writelog() {
 	/* Get the path of the last turnin */
 	sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
 
+	be_class(); /* Be class before calculating the hash */
+
 	snprintf(sha, 94,
 	         "%64s %s-%d.tgz\n",
 	         calculate_sha(assignment_path),
@@ -1116,7 +1118,7 @@ void writelog() {
 
 	strcpy(assignment_file, "LOGFILE");
 
-	be_class();
+	
 
 	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
 	if (fd == -1) {
