@@ -58,7 +58,7 @@
  *
  * As far as the user is concerned, the syntax is simply:
  *
- *    turnin  assignmt@class file1 [file2 [...]]
+ *    turnin  assignment@class file1 [file2 [...]]
  *
  ******************************************************************************/
 
@@ -852,7 +852,9 @@ void maketar() {
 		perror(assignment_path);
 		fprintf(stderr, "Could not open the final file: %s\n", assignment_path);
 		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
-		unlink(assignment_path);
+		if (lstat(assignment_path, &stat) != -1) {
+			unlink(assignment_path);
+		}
 		exit(1);
 	}
 
@@ -891,7 +893,9 @@ void maketar() {
 		        "        Contact the instructor or TA\n",
 		        childstat);
 		(void) close(ofd);
-		unlink(assignment_path);
+		if (lstat(assignment_path, &stat) != -1) {
+			unlink(assignment_path);
+		}
 		exit(1);
 	}
 
@@ -908,7 +912,7 @@ void maketar() {
 
 	if ( symlink(target, assignment_path) != 0 ) {
 		if (errno == EEXIST) { /* If the link already exists remove it */
-			/* Check if it exists to prevent tar from crashing */
+			/* Check if it "really" exists */
 			if (lstat(assignment_path, &stat) == -1) {
 				fprintf(stderr,
 				        "turnin: Error while checking Symlink to latest turnin!\n"
