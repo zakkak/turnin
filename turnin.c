@@ -23,91 +23,6 @@
  *
  *******************************************************************************
  *
- * CHANGELOG:
- *
- * 1993 version of the turnin program originally written by Paul Eggert
- *
- * Rewritten October 1993 by probert@cs.ucsb.edu
- *
- * Fixed Y2K bug in logging.  Andy Pippin <abp.cs.ucsb.edu>
- *
- * v1.3: Jeff Sheltren <sheltren@cs.ucsb.edu>
- *       Fix sprintf buffer overflow in writelog()
- *       Security flaw found by Stefan Karpinski <sgk@cs.ucsb.edu>
- *
- * v1.4: Jeff Sheltren <sheltren@cs.ucsb.edu>
- *       Change functionality to work with newer NFS versions
- *       Now, it works something like this:
- *       su user tar cf - assignment | su class gzip > /tmp/file; mv /tmp/file ~class/TURNIN/assignment
- *
- * 2010-11-04  Bryce Boe <bboe@cs.ucsb.edu>
- *    - Fixed ".." and "." in project name bug.
- *    - Also added exit(1) for user aborted exits.
- *
- * 2013-02-15  Bryce Boe <bboe@cs.ucsb.edu>
- *    - Check for EOF on input prompts to fix 100% CPU zombie processes bug
- *    - Reuse `wanttocontinue` for "already submitted prompt"
- *
- * 2014-09-01 Foivos S. Zakkak <foivos@zakkak.net>
- *    - Recursively check symlinks to get to the actual file
- *    - Reduced use of strcpy
- *    - Reduced attack surface
- *    - Ignore signals at the beginning (can't get interrupted while privileged)
- *    - Files renamed to *.tgz not *.tar.Z anymore
- *    - Some comments
- *    - isbinaryfile only checks for 0 since 0x80 results in false positives in
- *      unicode
- *    - Removed EQS define
- *    - Rename shufflenames to movetar
- *    - Add return type in functions
- *    - Remove unused variables
- *    - Fix Makefile
- *
- * 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
- *    - Fixed Feature macros
- *    - Check for proper values in LIMITS
- *    - Use only tar (czf) for both the archiving and the compression
- *      Now, it works something like this:
- *      su user tar czf - assignment | su class tee ~class/TURNIN/as1 > /dev/null
- *    - Write directly to the destination, don't use temp files and then move.
- *      This comes at the cost of possible left overs in a case of a fail.
- *    - Since the tar command is run by the user and not the class or the root
- *      it can only access and archive files readable by the user.  That means
- *      we don't need to check about these files.  We can let linux do all the
- *      permission checking for us.  Under the same spirit we do not need to
- *      worry about absolute and relative paths including ".." (CAUTION: this is
- *      only regarding files to be turned in and not the assignment path under
- *      TURNIN or the class name)
- *      As a result check_symlinks is no longer needed.
- *    - Introduce strict checks for file-paths for the assignment
- *
- * 2014-09-03  Bryce Boe <bboe@cs.ucsb.edu>
- *    - Add license notice
- *
- * 2014-09-03 Foivos S. Zakkak <foivos@zakkak.net>
- *    - Let tar ignore backup and vcs files
- *    - Fix arguments of tar to gunzip and not bzip
- *    - Extend licensing.  Add -V --version flags and add Copyright notices
- *      with the contributors)
- *    - Number all turnins and Create a symlink user.tgz to the latest turnin
- *    - Fix wrong argument order in tar command
- *    - Fix directory turn-in (bug introduced in 2014-09-02)
- *
- * 2014-09-05 Foivos S. Zakkak <foivos@zakkak.net>
- *    - Ignore hidden files and folders
- *    - Make sure the symlink to the latest turnin is a symlink before removing
- *
- * 2014-09-06 Foivos S. Zakkak <foivos@zakkak.net>
- *    - Completely remove SUNOS5 code
- *    - Add sha256-digests of turnins at SHA256
- *    - Replace the 5K static buffer in writelog with a dynamic one
- *    - Improve prompts
- *    - Reclaim some memory (free)
- * 2014-09-18 Antonios A. Chariton <daknob@tolabaki.gr>
- *    - Fix a problem that made SHA-256 calculation impossible
- *
- *******************************************************************************
- *
  * Instructor creates subdirectory TURNIN in home directory of the class
  * account.  For each assignment, a further subdirectory must be created
  * bearing the name of the assignment (e.g.  ~class/TURNIN/as2).
@@ -1121,7 +1036,7 @@ void writelog() {
 
 	strcpy(assignment_file, "LOGFILE");
 
-	
+
 
 	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
 	if (fd == -1) {
