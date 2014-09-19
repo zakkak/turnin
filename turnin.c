@@ -58,7 +58,7 @@
  *
  * As far as the user is concerned, the syntax is simply:
  *
- *    turnin  assignmt@class   file1 [file2] [file3] [...]
+ *    turnin  assignmt@class file1 [file2 [...]]
  *
  ******************************************************************************/
 
@@ -838,6 +838,14 @@ void maketar() {
 	sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
 
 	be_class();
+
+	/* The file should STILL not exist */
+	if (lstat(assignment_path, &stat) != -1) {
+		fprintf(stderr, "The final file '%s' already exists\n", assignment_path);
+		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
+		exit(1);
+	}
+
 	ofd = open(assignment_path, O_CREAT|O_EXCL|O_WRONLY, 0600);
 
 	if (ofd == -1) {
