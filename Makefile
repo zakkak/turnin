@@ -1,6 +1,7 @@
 ###############################################################################
 #
-#Copyright 1993      Paul Eggert
+# Copyright 1993      Paul Eggert
+# Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net>
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -18,17 +19,19 @@
 ###############################################################################
 
 CC= gcc
-CFLAGS= -O2 -Wall -Werror
+CFLAGS= -Wall -Werror
 LDFLAGS= -lcrypto
 
 turnin: turnin.o
 	$(CC) $(CFLAGS) turnin.o -o turnin $(LDFLAGS)
 
-install: turnin
-	rm -f $(DESTDIR)/usr/bin/turnin
+install: turnin uninstall
 	cp -p turnin $(DESTDIR)/usr/bin/
 	chmod u+s $(DESTDIR)/usr/bin/turnin
 	cp -pf turnin.1 $(DESTDIR)/usr/share/man/man1/
+
+uninstall:
+	-rm -f $(DESTDIR)/usr/bin/turnin $(DESTDIR)/usr/share/man/man1/turnin.1
 
 clean:
 	rm -f turnin turnin.o
