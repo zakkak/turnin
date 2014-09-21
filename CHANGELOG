@@ -2,6 +2,7 @@ CHANGELOG:
 
 2014-09-21 Antonios A. Chariton <daknob@tolabaki.gr>
    - Fix turnin out of bounds
+   - Release v2.1
 
 2014-09-19 Foivos S. Zakkak <foivos@zakkak.net>
    - Fix maxturnin bypass
