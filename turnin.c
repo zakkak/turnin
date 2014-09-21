@@ -327,6 +327,11 @@ void setup(char *arg) {
 		exit(1);
 	}
 
+	if ( assignment[0] == '\0' ){
+		fprintf(stderr, "turnin: assignment name cannot be empty");
+		exit(1);
+	}
+
 	assignment_path = (char *)malloc(i + MAX_FILENAME_LENGTH);
 	strcpy(assignment_path, pwd->pw_dir);
 	strcat(assignment_path, "/TURNIN/");
