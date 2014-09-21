@@ -328,7 +328,7 @@ void setup(char *arg) {
 	}
 
 	if ( assignment[0] == '\0' ){
-		fprintf(stderr, "turnin: assignment name cannot be empty");
+		fprintf(stderr, "turnin: assignment name cannot be empty\n");
 		exit(1);
 	}
 
