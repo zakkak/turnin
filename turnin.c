@@ -910,7 +910,7 @@ void maketar() {
 	/* Create a symlink to the latest version */
 	/* 9 for the letters and the '\0' + max possible digits of saveturnin */
 	target = malloc( (9+10+strlen(user_name))*sizeof(char) );
-	sprintf(target, "../%s-%d.tgz", user_name, saveturnin);
+	sprintf(target, "./%s-%d.tgz", user_name, saveturnin);
 	sprintf(assignment_file, "%s.tgz", user_name);
 
 	be_class();
