@@ -91,12 +91,12 @@
 /*
  * Global variables
  */
-char *turninversion = "2.1";
+char *turninversion = "2.2.1";
 
 char *user_name;
 
 char *assignment, *class;
-int  class_uid, user_uid;
+int  class_uid, user_uid, class_gid, user_gid;
 
 int maxfiles    =  100;
 int maxkbytes   = 1000;
@@ -212,8 +212,18 @@ void be_class() {
 		perror("seteuid root");
 		exit(1);
 	}
+	
+	if( setegid(0) != 0 ){
+		perror("setegid root");
+		exit(1);
+	}
 /*
  */
+	if ( setegid(class_gid) == -1 ) {
+		perror("setegid class");
+		exit(1);
+	}
+	
 	if (seteuid(class_uid) == -1) {
 		perror("seteuid");
 		exit(1);
@@ -225,8 +235,16 @@ void be_user() {
 		perror("seteuid root");
 		exit(1);
 	}
+	if ( setegid(0) == -1 ){
+		perror("setegid root");
+		exit(1);
+	}
 /*
  */
+	if ( setegid(user_gid) == -1 ){
+		perror("setegid user");
+		exit(1);
+	}
 	if (seteuid(user_uid) == -1) {
 		perror("seteuid");
 		exit(1);
@@ -312,6 +330,7 @@ void setup(char *arg) {
 	}
 
 	class_uid = pwd->pw_uid;
+	class_gid = pwd->pw_gid;
 
 	if (!class_uid) {
 		fprintf(stderr, "turnin: Cannot turnin to root\n");
@@ -961,7 +980,7 @@ void maketar() {
  * Convert the sha digest to a string
  */
 char *sha2string (unsigned char sha[SHA256_DIGEST_LENGTH]) {
-	static char string[65]; // Effectively global
+	static char string[65]; /* Effectively global */
     int i = 0;
 
     for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
@@ -1154,7 +1173,7 @@ int main(int argc, char* argv[]) {
 
 	writelog();
 
-	// Free memory
+	/* Free memory */
 	free(assignment_path);
 
 	fprintf(stderr,"\n*** TURNIN OF %s TO %s COMPLETE! ***\n",assignment,class);

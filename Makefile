@@ -2,6 +2,7 @@
 #
 # Copyright 1993      Paul Eggert
 # Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net>
+# Copyright 2014      Antonios A. Chariton <daknob@tolabaki.gr>
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -27,7 +28,7 @@ turnin: turnin.o
 
 install: turnin uninstall
 	cp -p turnin $(DESTDIR)/usr/bin/
-	chmod u+s $(DESTDIR)/usr/bin/turnin
+	chmod ug+s $(DESTDIR)/usr/bin/turnin
 	cp -pf turnin.1 $(DESTDIR)/usr/share/man/man1/
 
 uninstall:

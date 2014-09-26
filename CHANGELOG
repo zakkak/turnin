@@ -1,5 +1,10 @@
 CHANGELOG:
 
+2014-09-26 Antonios A. Chariton <daknob@tolabaki.gr>
+   - Fix issue where turn ins have the user's group id
+   - Fix issue where LOGFILE and SHA256 have the group id of the first user who turned in
+   - Relese v2.2.1
+
 2014-09-26 Foivos S. Zakkak <foivos@zakkak.net>
    - Fix decompression problems with symlink
    - Release v2.2
