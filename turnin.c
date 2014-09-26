@@ -252,25 +252,18 @@ void be_user() {
 }
 
 void wanttocontinue() {
-	char b[10], c;
-
-	fprintf(stderr, "*** Do you want to continue? ");
-
-	if (fgets(b, sizeof(b)-1, stdin) == NULL)
-		exit(1);
-	c = tolower(b[0]);
-	while (c != 'y' && c != 'n') {
-		(void) clearerr(stdin);
-		fprintf(stderr, "\n*** Please enter 'y' or 'n'.\n");
-		fprintf(stderr, "\n*** Do you want to continue? ");
-		if (fgets(b, sizeof(b)-1, stdin) == NULL)
-			exit(1);
-		c = tolower(b[0]);
-	}
-	if (c == 'n') {
+	/* Determine the intention of the user to proceed */
+	char c;
+	do{
+		fprintf(stderr, "\n*** Do you want to continue? (y/n) "); 	/* Show message */
+		scanf(" %c", &c);											/* Get the first character */
+		while(getc(stdin) != '\n'){}								/* Clear stdin */
+	} while ( c != 'n' && c != 'y' && c != 'Y' && c != 'N' );		
+	if ( c == 'n' || c == 'N' ){
 		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
 		exit(1);
 	}
+	return;
 }
 
 void setup(char *arg) {
@@ -304,7 +297,7 @@ void setup(char *arg) {
 	pwd = getpwuid(user_uid);
 
 	if (!pwd) {
-		fprintf(stderr, "turnin: Cannot lookup user (uid %d)\n", user_uid);
+		fprintf(stderr, "turnin: Cannot lookup user (uid %d)\n Please report this issue to the system administrators\n", user_uid);
 		exit(1);
 	}
 	user_name = strdup(pwd->pw_name);
@@ -364,7 +357,7 @@ void setup(char *arg) {
 	if (access("/bin/tar", X_OK) == 0)
 		tarcmd = "/bin/tar";
 	else {
-		fprintf(stderr, "turnin: Cannot find tar command\n");
+		fprintf(stderr, "turnin: Cannot find tar command\nPlease mention this to the system administrators\n");
 		exit(1);
 	}
 
@@ -382,14 +375,14 @@ void setup(char *arg) {
 
 	/* Does class own this directory? */
 	if (stat.st_uid != class_uid) {
-		fprintf(stderr, "turnin: %s not owned by %s.  ask for help.\n",
+		fprintf(stderr, "turnin: %s not owned by %s.  Please mention this to the instructor or TAs.\n",
 		        assignment_path, class);
 		exit(1);
 	}
 
 	/* Is it a directory ? */
 	if ((stat.st_mode & S_IFMT) != S_IFDIR) {
-		fprintf(stderr, "turnin: %s not a directory.  ask for help.\n",
+		fprintf(stderr, "turnin: %s not a directory.  Please mention this to the instructor or TAs.\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -398,7 +391,7 @@ void setup(char *arg) {
 	 * We need read to check for old turnins. Write to turnin the new one and
 	 * Execute because it is a directory */
 	if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
-		fprintf(stderr, "turnin: %s has bad mode. ask for help.\n",
+		fprintf(stderr, "turnin: %s has invalid permissions. Please mention to the instructor or TAs\n",
 		        assignment_path);
 		exit(1);
 	}
