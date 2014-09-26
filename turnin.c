@@ -91,11 +91,7 @@
 /*
  * Global variables
  */
-<<<<<<< HEAD
 char *turninversion = "2.2.1";
-=======
-char *turninversion = "2.2";
->>>>>>> FETCH_HEAD
 
 char *user_name;
 
