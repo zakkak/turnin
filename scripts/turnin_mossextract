@@ -1,0 +1,95 @@
+#!/bin/bash
+
+##########################################################################
+# The MIT License (MIT)                                                  #
+#                                                                        #
+# Copyright (c) 2014 Foivos S. Zakkak <foivos@zakkak.net>                #
+#                                                                        #
+# Permission is hereby granted, free of charge, to any person obtaining  #
+# a copy of this software and associated documentation files (the        #
+# "Software"), to deal in the Software without restriction, including    #
+# without limitation the rights to use, copy, modify, merge, publish,    #
+# distribute, sublicense, and/or sell copies of the Software, and to     #
+# permit persons to whom the Software is furnished to do so, subject to  #
+# the following conditions:                                              #
+#                                                                        #
+# The above copyright notice and this permission notice shall be         #
+# included in all copies or substantial portions of the Software.        #
+#                                                                        #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        #
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     #
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND                  #
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE #
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION #
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  #
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        #
+##########################################################################
+
+##########################################################################
+#                                                                        #
+# Usage example:                                                         #
+#   Supposing the assignment is called assign1 and all the turnins are   #
+#   in ~class/TURNIN/assign1 we would invoke this script like this       #
+#                                                                        #
+#   $ turnin_mossextract ~class/TURNIN/assign1 2014                      #
+#                                                                        #
+#   This will copy and extract the latest turnins of all students from   #
+#   ~class/TURNIN/assign1 to the current directory. Then it will move    #
+#   all extracted files to the top folder for each student to make it    #
+#   easier for moss to process.                                          #
+#                                                                        #
+#   (DO NOT USE under ~class/TURNIN/)                                    #
+#                                                                        #
+#   At the end you can invoke moss like this                             #
+#                                                                        #
+#   $ moss -l c -d */*                                                   #
+#                                                                        #
+##########################################################################
+
+# Check if there are two arguments
+if [ $# -eq 2 ]; then
+   if ! [[ -d "$1" ]]; then
+     echo "$1 is not a directory."
+     exit 1
+   fi
+else
+   echo "Usage: $0 <path/to/turnins> <year or suffix>"
+   exit 1
+fi
+
+shopt -s extglob  #Enables extglob needed for the regex bellow
+
+# Copy the latest turnins of all students (skipping resubmissions) in
+# the current directory
+cp -L $1/on_time/*([^-]).tgz ./
+# In case a student has both on_time and delayed turnins, only the
+# late one will be extracted
+cp -L $1/*([^-]).tgz ./
+
+# Extract them
+turnin_extract
+
+# delete the archives
+for i in *.tgz
+do
+    rm $i
+done
+
+# Delete any binary files (moss can't check them)
+find . -type f -exec file {} \; | grep -v text | cut -d: -f1 | while read i
+do
+    # remove -f and add -i for safe deletion
+    rm -f $i
+done
+
+# Now move all files at top level, so it's easier for moss to handle
+# CAUTION/FIXME if there are multiple files with the same name it
+# cannot keep all of them as it is
+for i in *_$2
+do
+    find $i -mindepth 1 -type f -exec mv -i {} $i/ \;
+    find $i -mindepth 1 -depth -type d -exec rmdir {} \;
+done
+
+# you can now run moss like this
+# moss -l c -d */*
