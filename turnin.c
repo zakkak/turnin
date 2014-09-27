@@ -212,7 +212,7 @@ void be_class() {
 		perror("seteuid root");
 		exit(1);
 	}
-	
+
 	if( setegid(0) != 0 ){
 		perror("setegid root");
 		exit(1);
@@ -223,7 +223,7 @@ void be_class() {
 		perror("setegid class");
 		exit(1);
 	}
-	
+
 	if (seteuid(class_uid) == -1) {
 		perror("seteuid");
 		exit(1);
@@ -239,8 +239,7 @@ void be_user() {
 		perror("setegid root");
 		exit(1);
 	}
-/*
- */
+
 	if ( setegid(user_gid) == -1 ){
 		perror("setegid user");
 		exit(1);
@@ -252,16 +251,35 @@ void be_user() {
 }
 
 void wanttocontinue() {
-	/* Determine the intention of the user to proceed */
-	char c;
-	do{
-		fprintf(stderr, "\n*** Do you want to continue? (y/n) "); 	/* Show message */
-		scanf(" %c", &c);											/* Get the first character */
-		while(getc(stdin) != '\n'){}								/* Clear stdin */
-	} while ( c != 'n' && c != 'y' && c != 'Y' && c != 'N' );		
-	if ( c == 'n' || c == 'N' ){
+	int c, t, i;
+
+	do {
+		i=0;
+		fprintf(stderr, "*** Do you want to continue? (y/n) ");
+
+		c = getchar();
+		c = tolower(c);
+
+		/* Get the rest of the input */
+		while( ( (t = getchar()) != '\n' ) &&
+		       ( t != EOF ) ) {
+			++i;
+		}
+		/* clear EOF in case it was reached */
+		clearerr(stdin);
+
+		/* Handle more than one characters, if more than one
+		 * characters was given ask again */
+		if (i) {
+			/* set c to something different than 'y' and 'n' */
+			c = 0;
+		}
+
+	} while (c != 'y' && c != 'n');
+
+	if (c == 'n') {
 		fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
-		exit(1);
+		exit(0);
 	}
 	return;
 }
