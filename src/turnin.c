@@ -91,7 +91,7 @@
 /*
  * Global variables
  */
-char *turninversion = "2.2.1";
+char *turninversion = "2.2.2";
 
 char *user_name;
 
@@ -616,8 +616,9 @@ void addfile(char *s) {
 		return;
 	}
 
-	/* Ignore hidden files */
-	if (strchr(s, '.') == s) {
+	/* Ignore hidden files or directories */
+	tmp = strrchr(s, '/');
+	if ( tmp && (strchr(tmp, '.') == (tmp+1)) ) {
 		f->f_flag = F_HIDDEN;
 		return;
 	}
@@ -671,13 +672,6 @@ void addfile(char *s) {
 		return;
 	}
 
-	/* Ignore hidden files */
-	tmp = strrchr(s, '/');
-	if ( tmp && (strchr(tmp, '.') == (tmp+1)) ) {
-		f->f_flag = F_HIDDEN;
-		return;
-	}
-
 	f->f_flag = F_DIRECTORY;
 
 
@@ -718,7 +712,7 @@ int warn_excludedfiles() {
 		case F_NOTFILE:  msg = "not a file, directory, or symlink"; break;
 		case F_BINFILE:  msg = "binary file"; break;
 		case F_TMPFILE:  msg = "temporary file"; break;
-		case F_HIDDEN:   msg = "hidden file or folder"; break;
+		case F_HIDDEN:   msg = "hidden file or directory"; break;
 		case F_NOTOWNER: msg = "not owned by user"; break;
 		case F_DOTDOT:   msg = "pathname contained '..'"; break;
 		case F_ROOTED:   msg = "only relative pathnames allowed"; break;

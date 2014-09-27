@@ -5,6 +5,8 @@ CHANGELOG:
      turnin.c)
    - Add scripts for turnins extraction
    - Update Makefile to much the new structure and install the scripts as well
+   - Fix Ignore hidden files or directories logic
+   - bump version to 2.2.2
 
 2014-09-27 Antonios A. Chariton <daknob@tolabaki.gr>
    - Make error messages friendlier to the user
