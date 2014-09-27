@@ -1,0 +1,6 @@
+turnin
+dep/
+obj/
+*.o
+*.d
+*~

@@ -1,12 +1,19 @@
 CHANGELOG:
 
+2014-09-27  Foivos S. Zakkak <foivos@zakkak.net>
+   - Change the directory structure of the project (getting ready to slice
+     turnin.c)
+   - Add scripts for turnins extraction
+   - Update Makefile to much the new structure and install the scripts as well
+
 2014-09-27 Antonios A. Chariton <daknob@tolabaki.gr>
    - Make error messages friendlier to the user
    - Optimize wanttocontinue() and remove static buffer
 
 2014-09-26 Antonios A. Chariton <daknob@tolabaki.gr>
    - Fix issue where turn ins have the user's group id
-   - Fix issue where LOGFILE and SHA256 have the group id of the first user who turned in
+   - Fix issue where LOGFILE and SHA256 have the group id of the first user
+     who turned in
    - Relese v2.2.1
 
 2014-09-26 Foivos S. Zakkak <foivos@zakkak.net>

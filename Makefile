@@ -23,29 +23,60 @@ CC= gcc
 CFLAGS= -Wall -Werror
 LDFLAGS= -lcrypto
 EUID=$(shell id -u -r)
+DESTDIR?=/usr
+SOURCES = $(wildcard src/*.c)
+HEADERS = $(wildcard src/*.h)
+OBJECTS = ${SOURCES:src/%.c=obj/%.o}
 
 .PHONY: check install uninstall clean
 
 all: check turnin
 
+# Check for root
 check:
 ifneq ($(EUID),0)
 	@echo "Please run as root user"
 	@exit 1
 endif
 
-turnin: check turnin.o
-	$(CC) $(CFLAGS) turnin.o -o turnin $(LDFLAGS)
+# Conditionally add dependencies rule
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),distclean)
+-include $(OBJECTS:obj/%.o=dep/%.d)
+endif
+endif
+
+dep/%.d: src/%.c $(HEADERS)
+	@mkdir -p $(dir $@)
+	@echo ' ' DEP $@
+	@$(CC) $(CFLAGS) -M $< | \
+		sed 's,[a-zA-Z0-9_\.]*.o:,$(<:src/%.c=obj/%.o):,' > $@
+
+obj/%.o: src/%.c dep/%.d $(HEADERS)
+	@mkdir -p $(dir $@)
+	@echo ' ' CC $@
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+turnin: check $(OBJECTS)
+	@echo ' ' LD $@
+	@$(CC) $(CFLAGS) $(OBJECTS) -o turnin $(LDFLAGS)
 
 install: check turnin uninstall
-	cp -p turnin $(DESTDIR)/usr/bin/
-	chmod ug+s $(DESTDIR)/usr/bin/turnin
-	cp -p turnin.1 $(DESTDIR)/usr/share/man/man1/
+	cp -p turnin $(DESTDIR)/bin/
+	chmod ug+s $(DESTDIR)/bin/turnin
+	cp -p scripts/turnin_extract $(DESTDIR)/bin/
+	cp -p scripts/turnin_mossextract $(DESTDIR)/bin/
+	cp -p man/turnin.1 $(DESTDIR)/share/man/man1/
 
 uninstall: check
 	-rm -f \
-		$(DESTDIR)/usr/bin/turnin \
-		$(DESTDIR)/usr/share/man/man1/turnin.1
+		$(DESTDIR)/bin/turnin \
+		$(DESTDIR)/bin/turnin_extract \
+		$(DESTDIR)/bin/turnin_mossextract \
+		$(DESTDIR)/share/man/man1/turnin.1
 
 clean:
-	rm -f turnin turnin.o
+	rm -rf obj dep
+
+distclean: clean
+	rm -f turnin
