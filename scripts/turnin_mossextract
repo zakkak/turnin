@@ -61,13 +61,13 @@ shopt -s extglob  #Enables extglob needed for the regex bellow
 
 # Copy the latest turnins of all students (skipping resubmissions) in
 # the current directory
-cp -L $1/on_time/*([^-]).tgz ./
+cp -L $1/on_time/*([^-]).tgz ./ 2> /dev/null
 # In case a student has both on_time and delayed turnins, only the
 # late one will be extracted
-cp -L $1/*([^-]).tgz ./
+cp -L $1/*([^-]).tgz ./ 2> /dev/null
 
 # Extract them
-turnin_extract
+turnin_extract $2
 
 # delete the archives
 for i in *.tgz

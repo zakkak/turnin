@@ -35,10 +35,18 @@
 #                                                                        #
 ##########################################################################
 
+# you can optionally give an argument as a suffix
+if [ ! -z "$1" ]
+then
+   suffix=_$1
+else
+   suffix=''
+fi
+
 # Extract them
 for i in *.tgz
 do
-    login=${i%.tgz};
+    login=${i%.tgz}$suffix;
     mkdir -p $login;
     tar -C $login -xzf $i;
 done
