@@ -27,16 +27,23 @@ DESTDIR?=/usr
 SOURCES = $(wildcard src/*.c)
 HEADERS = $(wildcard src/*.h)
 OBJECTS = ${SOURCES:src/%.c=obj/%.o}
+GIT:=$(shell which git)
 
-.PHONY: check install uninstall clean
+.PHONY: check install uninstall clean version
 
-all: check turnin
+all: version check turnin
 
 # Check for root
 check:
 ifneq ($(EUID),0)
 	@echo "Please run as root user"
 	@exit 1
+endif
+
+version:
+ifdef GIT
+	@echo ' SED' $@
+	@sed -ri 's/^(char \*turninversion = ").*(";)/\1'`git describe`'\2/' src/turnin.c
 endif
 
 # Conditionally add dependencies rule
@@ -48,20 +55,21 @@ endif
 
 dep/%.d: src/%.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	@echo ' ' DEP $@
+	@echo ' DEP' $@
 	@$(CC) $(CFLAGS) -M $< | \
 		sed 's,[a-zA-Z0-9_\.]*.o:,$(<:src/%.c=obj/%.o):,' > $@
 
 obj/%.o: src/%.c dep/%.d $(HEADERS)
 	@mkdir -p $(dir $@)
-	@echo ' ' CC $@
+	@echo ' CC ' $@
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-turnin: check $(OBJECTS)
-	@echo ' ' LD $@
+turnin: check version $(OBJECTS)
+	@echo ' LD ' $@
 	@$(CC) $(CFLAGS) $(OBJECTS) -o turnin $(LDFLAGS)
 
 install: check turnin uninstall
+	@echo ' INST'
 	cp -p turnin $(DESTDIR)/bin/
 	chmod ug+s $(DESTDIR)/bin/turnin
 	cp -p man/turnin.1 $(DESTDIR)/share/man/man1/
@@ -72,7 +80,9 @@ uninstall: check
 		$(DESTDIR)/share/man/man1/turnin.1
 
 clean:
+	@echo ' CLN'
 	rm -rf obj dep
 
 distclean: clean
+	@echo ' CLN dist'
 	rm -f turnin
