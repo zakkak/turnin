@@ -46,3 +46,34 @@ original code, minimizes attack surface), faster and with partly
 extended functionality. On September 6th, 2014, official support for 
 SunOS5 has been dropped. A few days later, both projects went under the
 GPL v3 License after contacting all the authors and agreeing to it.
+
+## Development
+
+### Pull requests
+
+Pull requests are always welcome.  Please respect the coding style and
+stay consistent.  In your pull request you should describe exactly
+what it solves and in the case that you use some complex
+logic/algorithm please describe it as well.
+
+### New release
+
+To create a new release first create an annotated tag (it would be
+nice if it is also signed), i.e.,
+
+```
+git tag -s -m "Release v2.2.2" v2.2.2
+```
+
+and then push the tags
+
+```
+git push --tags
+```
+
+#### Versions
+
+The version is retrieved automatically through the command `git
+describe` at compilation time (see target `version` in the Makefile).
+As a result there is no need to manually upgrade the version in the
+source files before a release.
