@@ -91,7 +91,7 @@
 /*
  * Global variables
  */
-char *turninversion = "2.2.2";
+char *turninversion = "v2.2.2";
 
 char *user_name;
 
