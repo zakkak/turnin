@@ -4,7 +4,7 @@ CHANGELOG:
    - Change the directory structure of the project (getting ready to slice
      turnin.c)
    - Add scripts for turnins extraction
-   - Update Makefile to much the new structure and install the scripts as well
+   - Update Makefile to much the new structure
    - Fix Ignore hidden files or directories logic
    - bump version to 2.2.2
 

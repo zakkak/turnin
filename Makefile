@@ -64,15 +64,11 @@ turnin: check $(OBJECTS)
 install: check turnin uninstall
 	cp -p turnin $(DESTDIR)/bin/
 	chmod ug+s $(DESTDIR)/bin/turnin
-	cp -p scripts/turnin_extract $(DESTDIR)/bin/
-	cp -p scripts/turnin_mossextract $(DESTDIR)/bin/
 	cp -p man/turnin.1 $(DESTDIR)/share/man/man1/
 
 uninstall: check
 	-rm -f \
 		$(DESTDIR)/bin/turnin \
-		$(DESTDIR)/bin/turnin_extract \
-		$(DESTDIR)/bin/turnin_mossextract \
 		$(DESTDIR)/share/man/man1/turnin.1
 
 clean:
