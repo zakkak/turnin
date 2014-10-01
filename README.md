@@ -54,7 +54,11 @@ GPL v3 License after contacting all the authors and agreeing to it.
 Pull requests are always welcome.  Please respect the coding style and
 stay consistent.  In your pull request you should describe exactly
 what it solves and in the case that you use some complex
-logic/algorithm please describe it as well.
+logic/algorithm please describe it as well. We would really appreciate
+if you could provide comments and explain most if not all parts of your
+code so we can maintain it, understand it and perform (security) audits.
+Since this is a suid-root binary, we need to establish the maximum amount
+of security possible for a C-written program.
 
 ### New release
 
