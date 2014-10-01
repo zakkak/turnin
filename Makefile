@@ -42,8 +42,10 @@ endif
 
 version:
 ifdef GIT
-	@echo ' SED' $@
-	@sed -ri 's/^(char \*turninversion = ").*(";)/\1'`git describe`'\2/' src/turnin.c
+	@if [ -d .git ]; then\
+	  echo ' SED' $@;\
+	  sed -ri 's/^(char \*turninversion = ").*(";)/\1'`git describe`'\2/' src/turnin.c;\
+	fi;
 endif
 
 # Conditionally add dependencies rule
