@@ -1,5 +1,10 @@
 CHANGELOG:
 
+2014-10-07 Antonios A. Chariton <daknob@tolabaki.gr>
+   - Added verify-turnin to verify a turnin
+   - Renamed the scripts for extraction 
+   - Release v2.3
+
 2014-09-27  Foivos S. Zakkak <foivos@zakkak.net>
    - Change the directory structure of the project (getting ready to slice
      turnin.c)

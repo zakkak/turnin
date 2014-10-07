@@ -75,6 +75,8 @@ install: check turnin uninstall
 	cp -p turnin $(DESTDIR)/bin/
 	chmod ug+s $(DESTDIR)/bin/turnin
 	cp -p man/turnin.1 $(DESTDIR)/share/man/man1/
+	cp -p scripts/verify-turnin $(DESTDIR)/bin
+	chmod 755 $(DESTDIR)/bin/verify-turnin
 
 uninstall: check
 	-rm -f \
