@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 ##########################################################################
 # The MIT License (MIT)                                                  #
@@ -53,22 +53,22 @@ def versionstuff():
     print " You can obtain a copy of the license here: <http://opensource.org/licenses/MIT> "
     print " Development: "
     print " Source Code available on GitHub: <https://github.com/zakkak/turnin> "
-    
+
 def isDir(path):
     return (os.path.exists(path) and os.path.isdir(path))
 
 if(len(sys.argv) != 2):     # On improper calls, return usage information
     usage()
     exit(1)                 # Improper Call
-    
+
 if(sys.argv[1] == "-V" or sys.argv[1] == "-v"): # Handle version and copyright
     versionstuff()
-    exit(0)                 
-    
+    exit(0)
+
 if(not("@" in sys.argv[1])):    # Check if the argument supplied is indeed "properly" formatted
     usage()
     exit(1)
-    
+
 argz = sys.argv[1].split("@")   # Split the argument supplied by using @ as a delimiter
 assignment = argz[0]            # The first field is the assignment
 course = argz[1]                # The second field is the course
@@ -92,5 +92,3 @@ else:
         print (" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
     else:
         print (" You have not turned in " + assignment + " for " + course + "! ")
-
-    
