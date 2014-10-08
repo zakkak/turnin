@@ -91,7 +91,7 @@
 /*
  * Global variables
  */
-char *turninversion = "v2.3";
+char *turninversion = "v2.3.1";
 
 char *user_name;
 
@@ -602,12 +602,6 @@ void addfile(char *s) {
 		must_be_dir = 1;
 	}
 
-	/* sanity check, if it ends with a / it must be a directory */
-	if (must_be_dir && (stat.st_mode & S_IFMT) != S_IFDIR) {
-		f->f_flag = F_NOTDIR;
-		return;
-	}
-
 	f->f_name = strdup(s);
 
 	/* Ignore core dumps */
@@ -626,6 +620,12 @@ void addfile(char *s) {
 	/* Check if it exists to prevent tar from crashing */
 	if (lstat(s, &stat) == -1) {
 		f->f_flag = F_NOEXIST;
+		return;
+	}
+
+	/* sanity check, if it ends with a / it must be a directory */
+	if (must_be_dir && (stat.st_mode & S_IFMT) != S_IFDIR) {
+		f->f_flag = F_NOTDIR;
 		return;
 	}
 

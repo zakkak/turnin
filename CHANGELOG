@@ -1,8 +1,13 @@
 CHANGELOG:
 
+2014-10-08  Foivos S. Zakkak <foivos@zakkak.net>
+   - Fix bug when turning in directories and include the trailing '/' like
+     , i.e., `turnin as1@c1 as1/`
+   - Release 2.3.1
+
 2014-10-07 Antonios A. Chariton <daknob@tolabaki.gr>
    - Added verify-turnin to verify a turnin
-   - Renamed the scripts for extraction 
+   - Renamed the scripts for extraction
    - Release v2.3
 
 2014-09-27  Foivos S. Zakkak <foivos@zakkak.net>
