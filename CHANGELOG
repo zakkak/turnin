@@ -1,6 +1,9 @@
 CHANGELOG:
 
 2014-10-08  Foivos S. Zakkak <foivos@zakkak.net>
+   - Split version from main source code
+
+2014-10-08  Foivos S. Zakkak <foivos@zakkak.net>
    - Fix bug when turning in directories and include the trailing '/' like
      , i.e., `turnin as1@c1 as1/`
    - Release 2.3.1

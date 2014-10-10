@@ -19,19 +19,21 @@
 #
 ###############################################################################
 
-CC= gcc
-CFLAGS= -Wall -Werror
-LDFLAGS= -lcrypto
-EUID=$(shell id -u -r)
-DESTDIR?=/usr
-SOURCES = $(wildcard src/*.c)
-HEADERS = $(wildcard src/*.h)
-OBJECTS = ${SOURCES:src/%.c=obj/%.o}
+CC      := gcc
+CFLAGS  := -Wall -I./src
+LDFLAGS := -lcrypto
+EUID    := $(shell id -u -r)
+DESTDIR ?=/usr
+SOURCES := $(wildcard src/*.c)
+SOURCES += obj/version.c            # This is automatically generated
+HEADERS := $(wildcard src/*.h)
+OBJECTS := ${SOURCES:src/%=obj/%}
+OBJECTS := ${OBJECTS:%.c=%.o}
 GIT:=$(shell which git)
 
-.PHONY: check install uninstall clean version
+.PHONY: check install uninstall clean
 
-all: version check turnin
+all: check turnin
 
 # Check for root
 check:
@@ -40,12 +42,17 @@ ifneq ($(EUID),0)
 	@exit 1
 endif
 
-version:
+obj/version.c: src/version.sed.me
 ifdef GIT
 	@if [ -d .git ]; then\
-	  echo ' SED' $@;\
-	  sed -ri 's/^(char \*turninversion = ").*(";)/\1'`git describe`'\2/' src/turnin.c;\
+	  echo ' SED version.sed.me';\
+	  mkdir -p $(dir $@);\
+	  sed -r 's/^(char \*turninversion = ").*(";)/\1'`git describe`'\2/' $< > $@;\
 	fi;
+else
+	@rm -f $@
+	@mkdir -p $(dir $@)
+	@cp $< $@
 endif
 
 # Conditionally add dependencies rule
@@ -61,12 +68,17 @@ dep/%.d: src/%.c $(HEADERS)
 	@$(CC) $(CFLAGS) -M $< | \
 		sed 's,[a-zA-Z0-9_\.]*.o:,$(<:src/%.c=obj/%.o):,' > $@
 
+%.o: %.c $(HEADERS)
+	@mkdir -p $(dir $@)
+	@echo ' CC ' $@
+	@$(CC) $(CFLAGS) -c $< -o $@
+
 obj/%.o: src/%.c dep/%.d $(HEADERS)
 	@mkdir -p $(dir $@)
 	@echo ' CC ' $@
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-turnin: check version $(OBJECTS)
+turnin: check $(OBJECTS)
 	@echo ' LD ' $@
 	@$(CC) $(CFLAGS) $(OBJECTS) -o turnin $(LDFLAGS)
 

@@ -82,5 +82,5 @@ the command `git describe` at compilation time (see target `version`
 in the Makefile).
 
 However since the `.git` directory is not contained in the release
-archives we still need to manually upgrade the version in the source
-files before a release.
+archives we still need to manually upgrade the version in
+`src/version.sed.me` before a release.

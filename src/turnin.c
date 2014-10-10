@@ -86,12 +86,9 @@
 
 #include <fcntl.h>
 
-#define MAX_PATH_LENGTH 4096
+#include "version.h"
 
-/*
- * Global variables
- */
-char *turninversion = "v2.3.1";
+#define MAX_PATH_LENGTH 4096
 
 char *user_name;
 
