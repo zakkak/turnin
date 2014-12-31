@@ -93,6 +93,7 @@ install: check turnin uninstall
 uninstall: check
 	-rm -f \
 		$(DESTDIR)/bin/turnin \
+		$(DESTDIR)/bin/verify-turnin \
 		$(DESTDIR)/share/man/man1/turnin.1
 
 clean:
