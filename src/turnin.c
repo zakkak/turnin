@@ -248,29 +248,35 @@ void be_user() {
 }
 
 void wanttocontinue() {
-	int c, t, i;
+	int c, t;
 
 	do {
-		i=0;
 		fprintf(stderr, "*** Do you want to continue? (y/n) ");
 
 		c = getchar();
-		c = tolower(c);
 
-		/* Get the rest of the input */
-		while( ( (t = getchar()) != '\n' ) &&
-		       ( t != EOF ) ) {
-			++i;
+		switch (c) {
+		case EOF:
+			clearerr(stdin);
+			/* Fall through */
+		case '\n':
+			continue;
+			break;
+		default:
+			c = tolower(c);
+			break;
 		}
-		/* clear EOF in case it was reached */
-		clearerr(stdin);
 
 		/* Handle more than one characters, if more than one
 		 * characters was given ask again */
-		if (i) {
+		/* Get the rest of the input */
+		while( ( (t = getchar()) != '\n' ) &&
+		       ( t != EOF ) ) {
 			/* set c to something different than 'y' and 'n' */
 			c = 0;
 		}
+		/* clear EOF in case it was reached */
+		clearerr(stdin);
 
 	} while (c != 'y' && c != 'n');
 
