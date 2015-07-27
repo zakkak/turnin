@@ -75,6 +75,18 @@ used to provide special instructions or reminders to the user.
 .B LOCK
 will disable turnins of the particular assignment.
 .LP
+.B DUE
+if present, due assignments begin calculate from date of file.
+.LP
+.B LATEMESSAGE
+file is printed out for the user if due assignment.
+.LP
+.B late
+directory contains late submissions.
+.LP
+.B on_time
+directory contains on time submissions.
+.LP
 .B LOGFILE
 keeps tracks of each turnin.
 .LP
@@ -94,6 +106,10 @@ maxkbytes 1000
 maxturnins 10
 .IP
 binary 0
+.IP
+daypenalty 10
+.IP
+weekendpenalty 5
 .LP
 that will set limits on how many files, how large the turnin can be,
 how many turnins can be made of each assignment and a boolean value

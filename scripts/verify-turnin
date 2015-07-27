@@ -33,6 +33,7 @@
 ##########################################################################
 
 import sys,os
+import datetime
 
 ver = "1.0"
 
@@ -84,11 +85,42 @@ if (not(isDir(classDir + "/TURNIN/" + assignment))):    # Check if the assignmen
     exit(3)                 # Could not find assignment
 
 grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' | grep -v '>' > /dev/null 2> /dev/null")
-if( grep == 0 ):
-    print (" You have successfully turned in " + assignment + " for " + course + " ")
-else:
+if( grep != 0 ):
     grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '>' > /dev/null 2> /dev/null")
     if ( grep == 0 ):
         print (" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
     else:
         print (" You have not turned in " + assignment + " for " + course + "! ")
+    exit(0)
+
+print (" You have successfully turned in " + assignment + " for " + course + " ")
+
+daypenalty = 10
+weekendpenalty = 5
+penalty = 0
+
+if os.path.isfile(classDir + "/TURNIN/" + assignment + "/DUE"):
+    file_settings = open(classDir + "/TURNIN/" + assignment + "/LIMITS", 'r')
+    for line in file_settings:
+        words = line.split()
+        word = int(words[1])
+        daypenalty = word if words[0] == "daypenalty" and (word > 0 and word < 100) else daypenalty
+        weekendpenalty = word if words[0] == "weekendpenalty" and (word > 0 and word < 100) else weekendpenalty
+
+    fileDue = os.path.getmtime(classDir + "/TURNIN/" + assignment + "/DUE")
+    now = datetime.datetime.today()
+    filedate = datetime.datetime.fromtimestamp(fileDue)
+    difftime = now - filedate
+    diff_days = difftime.days
+    if diff_days > 0:
+        if diff_days > 1:
+            if (now.hour < filedate.hour) or (now.hour == filedate.hour and now.minute < filedate.minute):
+                now -= datetime.timedelta(days=1)
+        while diff_days > 0:
+            now -= datetime.timedelta(days=1)
+            penalty += weekendpenalty if (now.weekday() == 5 or now.weekday() == 6) else daypenalty
+            diff_days -= 1
+            if penalty >= 100:
+                print " MAX %d PENALTY REACHED " % penalty
+                break
+    print " You have %d%% penalty on final grade for %d days " % (penalty, difftime.days)
