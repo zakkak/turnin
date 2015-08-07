@@ -33,7 +33,7 @@
 ##########################################################################
 
 import sys,os
-import datetime
+import fnmatch, re, getpass
 
 ver = "1.0"
 
@@ -57,6 +57,26 @@ def versionstuff():
 
 def isDir(path):
     return (os.path.exists(path) and os.path.isdir(path))
+
+def tryint(s):
+    try:
+        return int(s)
+    except:
+        return s
+
+def alphanum_key(s):
+    """ Turn a string into a list of string and number chunks.
+        "z23a" -> ["z", 23, "a"]
+    """
+    return [ tryint(c) for c in re.split('([0-9]+)', s) ]
+
+def get_user_files(path):
+    user_files = [  f
+                    for files in next(os.walk(classDir + "/TURNIN/" + assignment + path))
+                    for f in fnmatch.filter(files, getpass.getuser() + '*.tgz')]
+    user_files.sort(key=alphanum_key)
+
+    return user_files
 
 if(len(sys.argv) != 2):     # On improper calls, return usage information
     usage()
@@ -95,32 +115,20 @@ if( grep != 0 ):
 
 print (" You have successfully turned in " + assignment + " for " + course + " ")
 
-daypenalty = 10
-weekendpenalty = 5
 penalty = 0
+saveturnin_late = 0
+saveturnin_on_time = 0
 
-if os.path.isfile(classDir + "/TURNIN/" + assignment + "/DUE"):
-    file_settings = open(classDir + "/TURNIN/" + assignment + "/LIMITS", 'r')
-    for line in file_settings:
-        words = line.split()
-        word = int(words[1])
-        daypenalty = word if words[0] == "daypenalty" and (word > 0 and word < 100) else daypenalty
-        weekendpenalty = word if words[0] == "weekendpenalty" and (word > 0 and word < 100) else weekendpenalty
+user_files = get_user_files("/late")
+if (user_files):
+    numbers = re.findall(r'\d+', user_files[-1])
+    saveturnin_late = int(numbers[0])
+    penalty = int(numbers[-1])
 
-    fileDue = os.path.getmtime(classDir + "/TURNIN/" + assignment + "/DUE")
-    now = datetime.datetime.today()
-    filedate = datetime.datetime.fromtimestamp(fileDue)
-    difftime = now - filedate
-    diff_days = difftime.days
-    if diff_days > 0:
-        if diff_days > 1:
-            if (now.hour < filedate.hour) or (now.hour == filedate.hour and now.minute < filedate.minute):
-                now -= datetime.timedelta(days=1)
-        while diff_days > 0:
-            now -= datetime.timedelta(days=1)
-            penalty += weekendpenalty if (now.weekday() == 5 or now.weekday() == 6) else daypenalty
-            diff_days -= 1
-            if penalty >= 100:
-                print " MAX %d PENALTY REACHED " % penalty
-                break
-    print " You have %d%% penalty on final grade for %d days " % (penalty, difftime.days)
+user_files = get_user_files("/on_time")
+if (user_files):
+    numbers = re.findall(r'\d+', user_files[-1])
+    saveturnin_on_time = int(numbers[0])
+
+if (saveturnin_late > saveturnin_on_time):
+    print " You have %d%% penalty on final grade" % (penalty)

@@ -72,12 +72,6 @@ operation:
 is printed out for the user at the beginning of the turnin.  It can be
 used to provide special instructions or reminders to the user.
 .LP
-.B LOCK
-will disable turnins of the particular assignment.
-.LP
-.B DUE
-if present, due assignments begin calculate from date of file.
-.LP
 .B LATEMESSAGE
 file is printed out for the user if due assignment.
 .LP
@@ -110,6 +104,10 @@ binary 0
 daypenalty 10
 .IP
 weekendpenalty 5
+.IP
+duedate YYYYMMDD HH:MM
+.IP
+lockdate YYYYMMDD HH:MM
 .LP
 that will set limits on how many files, how large the turnin can be,
 how many turnins can be made of each assignment and a boolean value
