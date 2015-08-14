@@ -596,16 +596,18 @@ void setup(char *arg) {
 				}
 				weekendpenalty = n;
 			} else if (strcasecmp(keyword, "duedate") == 0) {
-				sscanf(buf, "%s %14c", keyword, str_date);
-				if (!check_date(str_date, &duedate)) {
+				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
+					warn = 1;
+				} else if (!check_date(str_date, &duedate)) {
 					fprintf(stderr,
 					        "turnin: duedate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
 					        "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 			} else if (strcasecmp(keyword, "lockdate") == 0) {
-				sscanf(buf, "%s %14c", keyword, str_date);
-				if (!check_date(str_date, &lockdate)) {
+				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
+					warn = 1;
+				} else if (!check_date(str_date, &lockdate)) {
 					fprintf(stderr,
 					        "turnin: lockdate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
 					        "        Please notify the Instructor or a TA.\n");
@@ -1235,7 +1237,7 @@ void writelog() {
 	be_class(); /* Be class before calculating the hash */
 
 	if (penalty) {
-		snprintf(sha, 94,
+		snprintf(sha, 97,
 		         "%64s %8s-%d-%d.tgz\n",
 		         calculate_sha(assignment_path),
 		         user_name, saveturnin, penalty);
@@ -1290,7 +1292,7 @@ void writelog() {
 
 void checkdue() {
 	FILE *fd;
-  struct tm *tm;
+  struct tm *tm_curr;
 	time_t curr_time;
 	double diff_time;
 	int diff_days;
@@ -1308,21 +1310,21 @@ void checkdue() {
 	if (diff_days > 0) {
 		if (diff_days > 1) {
 			// fix prev not full day
-			tm = localtime(&duedate);
-			curr_due_hour = tm->tm_hour;
-			curr_due_min = tm->tm_min;
-			tm = localtime(&curr_time);
-			if (tm->tm_hour < curr_due_hour ||
-					(tm->tm_hour == curr_due_hour &&
-					 tm->tm_min < curr_due_min))
+			tm_curr = localtime(&duedate);
+			curr_due_hour = tm_curr->tm_hour;
+			curr_due_min = tm_curr->tm_min;
+			tm_curr = localtime(&curr_time);
+			if (tm_curr->tm_hour < curr_due_hour ||
+					(tm_curr->tm_hour == curr_due_hour &&
+					 tm_curr->tm_min < curr_due_min))
 				curr_time -= 86400;
 		}
 		// calculate penalty
 		for(;diff_days > 0;diff_days--) {
 			curr_time -= 86400; // one day ago
-			tm = localtime(&curr_time);
+			tm_curr = localtime(&curr_time);
 
-			penalty += (tm->tm_wday == 0 || tm->tm_wday == 6) ? weekendpenalty : daypenalty;
+			penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
 
 			if (penalty >= 100) {
 				fprintf(stderr, "\n*** MAX (%d) PENALTY REACHED FOR %s ***\n",
