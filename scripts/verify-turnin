@@ -33,6 +33,7 @@
 ##########################################################################
 
 import sys,os
+import fnmatch, re, getpass
 
 ver = "1.0"
 
@@ -56,6 +57,26 @@ def versionstuff():
 
 def isDir(path):
     return (os.path.exists(path) and os.path.isdir(path))
+
+def tryint(s):
+    try:
+        return int(s)
+    except:
+        return s
+
+def alphanum_key(s):
+    """ Turn a string into a list of string and number chunks.
+        "z23a" -> ["z", 23, "a"]
+    """
+    return [ tryint(c) for c in re.split('([0-9]+)', s) ]
+
+def get_user_files(path):
+    user_files = [  f
+                    for files in next(os.walk(classDir + "/TURNIN/" + assignment + path))
+                    for f in fnmatch.filter(files, getpass.getuser() + '*.tgz')]
+    user_files.sort(key=alphanum_key)
+
+    return user_files
 
 if(len(sys.argv) != 2):     # On improper calls, return usage information
     usage()
@@ -84,11 +105,33 @@ if (not(isDir(classDir + "/TURNIN/" + assignment))):    # Check if the assignmen
     exit(3)                 # Could not find assignment
 
 grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' | grep -v '>' > /dev/null 2> /dev/null")
-if( grep == 0 ):
-    print (" You have successfully turned in " + assignment + " for " + course + " ")
-else:
+if( grep != 0 ):
     grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '>' > /dev/null 2> /dev/null")
     if ( grep == 0 ):
         print (" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
     else:
         print (" You have not turned in " + assignment + " for " + course + "! ")
+    exit(0)
+
+print (" You have successfully turned in " + assignment + " for " + course + " ")
+
+penalty = 0
+saveturnin_late = 0
+saveturnin_on_time = 0
+
+user_files = get_user_files("/late")
+if (user_files):
+    numbers = re.findall(r'\d+', user_files[-1])
+    saveturnin_late = int(numbers[0])
+    penalty = int(numbers[-1])
+
+user_files = get_user_files("/on_time")
+if (user_files):
+    numbers = re.findall(r'\d+', user_files[-1])
+    saveturnin_on_time = int(numbers[0])
+
+if (saveturnin_late != 0 and saveturnin_on_time > saveturnin_late):
+    print " Warning! You have ON_TIME submissions newer then LATE!"
+
+if (saveturnin_late > saveturnin_on_time):
+    print " You have %d%% penalty on final grade" % (penalty)

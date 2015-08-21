@@ -86,6 +86,8 @@
 
 #include <fcntl.h>
 
+#include <glob.h>
+
 #include "version.h"
 
 #define MAX_PATH_LENGTH 4096
@@ -95,14 +97,22 @@ char *user_name;
 char *assignment, *class;
 int  class_uid, user_uid, class_gid, user_gid;
 
-int maxfiles    =  100;
-int maxkbytes   = 1000;
-int maxturnins  =   10;
-int binary      =    0;
+int maxfiles       =  100;
+int maxkbytes      = 1000;
+int maxturnins     =   10;
+int binary         =    0;
+int daypenalty     =   10;
+int weekendpenalty =    5;
+
+int penalty = 0;
+
+time_t duedate = 0;
+time_t lockdate = 0;
 
 int nfiles, nkbytes, nsymlinks;
 
 char *assignment_path, *assignment_file;
+char *assignment_path_files[] = {"on_time", "late"};
 int saveturnin = 1;
 #define MAX_FILENAME_LENGTH 256
 
@@ -287,6 +297,99 @@ void wanttocontinue() {
 	return;
 }
 
+/*
+ * Find longest submissions path
+ * Using for malloc
+ */
+
+int find_longest_sub_path() {
+	int i, current, longest_path = 0;
+
+	for (i = 0; i < sizeof(assignment_path_files)/sizeof(char*) ;i++) {
+		current = strlen(assignment_path_files[i]);
+		if (current > longest_path) {
+			longest_path = current;
+		}
+	}
+
+	return longest_path;
+}
+
+void check_submissions_paths() {
+	char *submissions_paths;
+	int longest_path = 0;
+	int path_len = 0;
+	int i;
+	struct stat stat;
+
+	/* find longest submissions path */
+	longest_path = find_longest_sub_path();
+
+	/* assignment_path is in the class' home directory */
+	/* plus longest_path submissions */
+	/* plus 2 for begin '/' and end '/' */
+	/* plus 2 is for adding the '/' and '\0' */
+
+	path_len = strlen(assignment_path) + longest_path + 2 + 2;
+
+	if ( path_len > (MAX_PATH_LENGTH - MAX_FILENAME_LENGTH) ) {
+		fprintf(stderr, "turnin: turnin path for submissions longer than %d\n", MAX_PATH_LENGTH);
+		exit(1);
+	}
+
+	for (i = 0; i < sizeof(assignment_path_files)/sizeof(char*); i++) {
+		submissions_paths = (char *)malloc( (path_len + MAX_FILENAME_LENGTH) * sizeof(char));
+		strncpy(submissions_paths, assignment_path, strlen(assignment_path) - 1); // -1 for traling '.'
+		submissions_paths[strlen(assignment_path) - 1] = '\0';
+		strcat(submissions_paths, assignment_path_files[i]);
+
+		/* Does it exist? */
+		if (lstat(submissions_paths, &stat) == -1) {
+			perror(submissions_paths);
+			exit(1);
+		}
+
+		/* Does class own this directory? */
+		if (stat.st_uid != class_uid) {
+			fprintf(stderr, "turnin: %s not owned by %s.  Please mention this to the instructor or TAs.\n",
+			        submissions_paths, class);
+			exit(1);
+		}
+
+		/* Is it a directory ? */
+		if ((stat.st_mode & S_IFMT) != S_IFDIR) {
+			fprintf(stderr, "turnin: %s not a directory.  Please mention this to the instructor or TAs.\n",
+			        submissions_paths);
+			exit(1);
+		}
+
+		/* Does the class have RWX permissions on the directory ?
+		 * We need read to check for old turnins. Write to turnin the new one and
+		 * Execute because it is a directory */
+		if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
+			fprintf(stderr, "turnin: %s has invalid permissions. Please mention to the instructor or TAs\n",
+			        submissions_paths);
+			exit(1);
+		}
+		free(submissions_paths);
+	}
+}
+
+/*
+ * Check date format in LIMITS
+ * Example:
+ *   %Y%m%d %H:%M - 20150101 23:59
+ */
+int check_date(char *str_date, time_t *t) {
+	struct tm tm = {0};
+
+	if (strlen(str_date) != 14) return 0; // check date length format 20150101 23:59
+	if (strptime(str_date, "%Y%m%d %H:%M", &tm) == NULL) return 0;
+	*t = mktime(&tm);
+	if (*t == -1) return 0;
+	return 1;
+}
+
 void setup(char *arg) {
 	struct passwd *pwd;
 	struct stat stat;
@@ -294,8 +397,15 @@ void setup(char *arg) {
 	FILE *fd;
 
 	char keyword[256];
+	char str_date[32];
 	int n;
 	int i, warn;
+
+	time_t curr_time;
+	double diff_time;
+
+	glob_t glob_buffer = {0};
+	int file_exists;
 
 	/* Check if it was compiled/setup properly */
 	if (geteuid() != 0)
@@ -417,16 +527,7 @@ void setup(char *arg) {
 		exit(1);
 	}
 
-	/* Check if the assignment is locked */
-	strcpy(assignment_file, "LOCK");
-	if (lstat(assignment_path, &stat) != -1) {
-		*assignment_file = 0;
-		fprintf(stderr,
-		        "turnin: Assignment directory locked: %s.\n"
-		        "        Please contact the instructor or a TA\n",
-		        assignment_path);
-		exit(1);
-	}
+	check_submissions_paths();
 
 	/*
 	 * Check limits file
@@ -451,6 +552,8 @@ void setup(char *arg) {
 
 			/* Remove spaces from the start */
 			for (p = buf;  *p && isspace(*p);  p++) ;
+
+			memset((void *)str_date, 0, sizeof(str_date));
 
 			warn = 0;
 			if (sscanf(buf, "%s %d", keyword, &n) != 2) {
@@ -487,6 +590,40 @@ void setup(char *arg) {
 					exit(1);
 				}
 				binary = n;
+			} else if (strcasecmp(keyword, "daypenalty") == 0) {
+				if ( n < 0 || n > 100 ) {
+					fprintf(stderr,
+					        "turnin: daypenalty in the LIMITS file must be a positive value - (0 < penalty < 100)\n"
+					        "        Please notify the Instructor or a TA.\n");
+					exit(1);
+				}
+				daypenalty = n;
+			} else if (strcasecmp(keyword, "weekendpenalty") == 0) {
+				if ( n < 0 || n > 100 ) {
+					fprintf(stderr,
+					        "turnin: weekendpenalty in the LIMITS file must be a positive value - (0 < penalty < 100)\n"
+					        "        Please notify the Instructor or a TA.\n");
+					exit(1);
+				}
+				weekendpenalty = n;
+			} else if (strcasecmp(keyword, "duedate") == 0) {
+				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
+					warn = 1;
+				} else if (!check_date(str_date, &duedate)) {
+					fprintf(stderr,
+					        "turnin: duedate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
+					        "        Please notify the Instructor or a TA.\n");
+					exit(1);
+				}
+			} else if (strcasecmp(keyword, "lockdate") == 0) {
+				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
+					warn = 1;
+				} else if (!check_date(str_date, &lockdate)) {
+					fprintf(stderr,
+					        "turnin: lockdate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
+					        "        Please notify the Instructor or a TA.\n");
+					exit(1);
+				}
 			} else {
 				warn = 1;
 			}
@@ -497,6 +634,20 @@ void setup(char *arg) {
 			}
 		}
 		(void) fclose(fd);
+	}
+
+	/* Check if the assignment is locked */
+	curr_time = time(0);
+	if (lockdate != 0) {
+		diff_time = difftime(curr_time, lockdate);
+		if (diff_time > 0) {
+			*assignment_file = '\0';
+			fprintf(stderr,
+			        "turnin: Assignment directory locked: %s.\n"
+			        "        Please contact the instructor or a TA\n",
+			        assignment_path);
+			exit(1);
+		}
 	}
 
 	/*
@@ -525,9 +676,14 @@ void setup(char *arg) {
 	if (lstat(assignment_path, &stat) != -1) {
 		/* compute next version name */
 		for (saveturnin = 1;  saveturnin <= maxturnins;  saveturnin++) {
-			sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
-			if (lstat(assignment_path, &stat) == -1)
-				break;
+			file_exists = 1;
+
+			sprintf(assignment_file, "{on_time,late}/%s-%d{,-*}.tgz", user_name, saveturnin);
+			glob(assignment_path, GLOB_BRACE, NULL, &glob_buffer);
+			if (glob_buffer.gl_pathc == 0) file_exists = 0;
+			globfree(&glob_buffer);
+
+			if (!file_exists) break;
 		}
 
 		if (saveturnin > maxturnins) {
@@ -864,10 +1020,15 @@ void maketar() {
 	}
 	*tvp = 0;
 
+
 	/*
 	 * setup the target name
 	 */
-	sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
+	if (penalty) {
+		sprintf(assignment_file, "late/%s-%d-%d.tgz", user_name, saveturnin, penalty);
+	} else {
+		sprintf(assignment_file, "on_time/%s-%d.tgz", user_name, saveturnin);
+	}
 
 	be_class();
 
@@ -935,9 +1096,16 @@ void maketar() {
 
 
 	/* Create a symlink to the latest version */
+	/* 3 for penalty */
+	/* 8 for submission folder */
 	/* 9 for the letters and the '\0' + max possible digits of saveturnin */
-	target = malloc( (9+10+strlen(user_name))*sizeof(char) );
-	sprintf(target, "./%s-%d.tgz", user_name, saveturnin);
+	target = malloc( (3+8+9+10+strlen(user_name))*sizeof(char) );
+	if (penalty) {
+		sprintf(target, "./late/%s-%d-%d.tgz", user_name, saveturnin, penalty);
+	} else {
+		sprintf(target, "./on_time/%s-%d.tgz", user_name, saveturnin);
+	}
+
 	sprintf(assignment_file, "%s.tgz", user_name);
 
 	be_class();
@@ -1033,23 +1201,12 @@ char *calculate_sha(char *filename) {
 }
 
 /*
- * write the log entry
- *
- *  whichturnin, user, turnin number, date, time, number-of-files
- *
+ * Return string for log file
  */
-void writelog() {
+char *getfilelog() {
 	char *log;
-	int   logl;
-	char  sha[94];              /* 10 for the format string
-	                             * 64 for the sha256
-	                             * 8 for the username
-	                             * 10 for the number of turnins
-	                             * 1 for '\0'
-	                             * +1 to make it even
-	                             */
-	int   fd, x;
 	char *t;
+	int logl;
 
 	t = timestamp(time(0));
 
@@ -1068,19 +1225,46 @@ void writelog() {
 
 	free(t);
 
-	/* Get the path of the last turnin */
-	sprintf(assignment_file, "%s-%d.tgz", user_name, saveturnin);
+	return log;
+}
+
+/*
+ * write the log entry
+ *
+ *  whichturnin, user, turnin number, date, time, number-of-files
+ *
+ */
+void writelog() {
+	char *log;
+	char  sha[97];              /* 10 for the format string
+	                             * 64 for the sha256
+	                             * 8 for the username
+	                             * 10 for the number of turnins
+															 * 3 for the penalty
+	                             * 1 for '\0'
+	                             * +1 to make it even
+	                             */
+	int   fd, x;
+
+	log = getfilelog();
 
 	be_class(); /* Be class before calculating the hash */
 
-	snprintf(sha, 94,
-	         "%64s %8s-%d.tgz\n",
-	         calculate_sha(assignment_path),
-	         user_name, saveturnin);
+	if (penalty) {
+		sprintf(assignment_file, "late/%s-%d-%d.tgz", user_name, saveturnin, penalty);
+		snprintf(sha, 97,
+		         "%64s %8s-%d-%d.tgz\n",
+		         calculate_sha(assignment_path),
+		         user_name, saveturnin, penalty);
 
+	} else {
+		sprintf(assignment_file, "on_time/%s-%d.tgz", user_name, saveturnin);
+		snprintf(sha, 94,
+		         "%64s %8s-%d.tgz\n",
+		         calculate_sha(assignment_path),
+		         user_name, saveturnin);
+	}
 	strcpy(assignment_file, "LOGFILE");
-
-
 
 	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
 	if (fd == -1) {
@@ -1121,6 +1305,58 @@ void writelog() {
 	free(log);
 }
 
+void checkdue() {
+	FILE *fd;
+  struct tm *tm_curr;
+	time_t curr_time;
+	double diff_time;
+	int diff_days;
+
+	curr_time = time(0);
+
+	/* Check if the assignment is due */
+	if (duedate == 0) return;
+	diff_time = difftime(curr_time, duedate);
+	if (diff_time < 0) return;
+	// calculate different days
+	diff_days = (int)diff_time / 86400; // in days
+
+	// calculate penalty
+	tm_curr = localtime(&curr_time);
+	penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
+
+	for(;diff_days > 0;diff_days--) {
+		curr_time -= 86400; // one day ago
+		tm_curr = localtime(&curr_time);
+
+		penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
+
+		if (penalty >= 100) {
+			fprintf(stderr, "\n*** MAX (%d) PENALTY REACHED FOR %s ***\n",
+			        penalty, user_name);
+			fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
+			exit(1);
+		}
+	}
+	/*
+	 * If there is a LATEMESSAGE file print it out.
+	 * (someday use a pager)
+	 */
+	strcpy(assignment_file, "LATEMESSAGE");
+	fd = fopen(assignment_path, "r");
+	if (fd) {
+		int c;
+		fprintf(stderr, "*************** LATEMESSAGE **************\n");
+		for (c = fgetc(fd); c != EOF; c = fgetc(fd)) {
+			putchar(c);
+		}
+		fprintf(stderr, "******************************************\n");
+		(void) fclose(fd);
+	}
+	fprintf(stderr, "\n*** You have %d%% penalty on final grade ***\n", penalty);
+	wanttocontinue();
+}
+
 int main(int argc, char* argv[]) {
 
 	if (argc > 1) {
@@ -1144,6 +1380,8 @@ int main(int argc, char* argv[]) {
 	(void) sigignore(SIGTTOU);
 
 	setup(argv[1]);
+
+  checkdue();
 
 	argv += 2; argc -= 2;
 	while (argc--)
