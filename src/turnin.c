@@ -390,10 +390,17 @@ void check_submissions_paths() {
 int check_date(char *str_date, time_t *t) {
 	struct tm tm = {0};
 
-	if (strlen(str_date) != 14) return 0; // check date length format 20150101 23:59
-	if (strptime(str_date, "%Y%m%d %H:%M", &tm) == NULL) return 0;
+	/* check date length format 20150101 23:59 */
+	if (strlen(str_date) != 14)
+		return 0;
+
+	if (strptime(str_date, "%Y%m%d %H:%M", &tm) == NULL)
+		return 0;
+
 	*t = mktime(&tm);
-	if (*t == -1) return 0;
+	if (*t == -1)
+		return 0;
+
 	return 1;
 }
 
@@ -405,14 +412,14 @@ void setup(char *arg) {
 
 	char keyword[256];
 	char str_date[32];
-	int n;
-	int i, warn;
+	int  n;
+	int  i, warn;
 
 	time_t curr_time;
 	double diff_time;
 
 	glob_t glob_buffer = {0};
-	int file_exists;
+	int    file_exists;
 
 	/* Check if it was compiled/setup properly */
 	if (geteuid() != 0)
