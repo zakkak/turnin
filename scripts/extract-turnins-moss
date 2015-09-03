@@ -53,17 +53,15 @@ if [ $# -eq 2 ]; then
      exit 1
    fi
 else
-   echo "Usage: $0 <path/to/turnins> <year or suffix>"
+   echo "Usage: $0 <path/to/TURNIN/assignment> <year or suffix>"
    exit 1
 fi
 
 shopt -s extglob  #Enables extglob needed for the regex bellow
 
-# Copy the latest turnins of all students (skipping resubmissions) in
-# the current directory
-cp -L $1/on_time/*([^-]).tgz ./ 2> /dev/null
-# In case a student has both on_time and delayed turnins, only the
-# late one will be extracted
+# Copy the latest turnins of all students in the current directory In
+# case a student has both on_time and delayed turnins, only the late
+# one will be extracted
 cp -L $1/*([^-]).tgz ./ 2> /dev/null
 
 # Extract them
