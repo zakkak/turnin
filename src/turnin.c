@@ -349,7 +349,7 @@ void check_submissions_paths() {
 			if (mkdir(submissions_paths,
 			          S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1) {
 				fprintf(stderr,
-				        "turnin: Failed to create directory %s."
+				        "turnin: Failed to create directory %s.\n"
 				        "        Please mention this to the instructor or the TAs.\n",
 				        submissions_paths);
 				perror(submissions_paths);
@@ -360,7 +360,7 @@ void check_submissions_paths() {
 		/* Does class own this directory? */
 		if (stat.st_uid != class_uid) {
 			fprintf(stderr,
-			        "turnin: %s not owned by %s."
+			        "turnin: %s not owned by %s.\n"
 			        "        Please mention this to the instructor or the TAs.\n",
 			        submissions_paths, class);
 			exit(1);
@@ -369,7 +369,7 @@ void check_submissions_paths() {
 		/* Is it a directory ? */
 		if ((stat.st_mode & S_IFMT) != S_IFDIR) {
 			fprintf(stderr,
-			        "turnin: %s not a directory."
+			        "turnin: %s not a directory.\n"
 			        "        Please mention this to the instructor or the TAs.\n",
 			        submissions_paths);
 			exit(1);
