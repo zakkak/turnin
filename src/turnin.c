@@ -351,14 +351,14 @@ void check_submissions_paths() {
 
 		/* Does class own this directory? */
 		if (stat.st_uid != class_uid) {
-			fprintf(stderr, "turnin: %s not owned by %s.  Please mention this to the instructor or TAs.\n",
+			fprintf(stderr, "turnin: %s not owned by %s.  Please mention this to the instructor or the TAs.\n",
 			        submissions_paths, class);
 			exit(1);
 		}
 
 		/* Is it a directory ? */
 		if ((stat.st_mode & S_IFMT) != S_IFDIR) {
-			fprintf(stderr, "turnin: %s not a directory.  Please mention this to the instructor or TAs.\n",
+			fprintf(stderr, "turnin: %s not a directory.  Please mention this to the instructor or the TAs.\n",
 			        submissions_paths);
 			exit(1);
 		}
@@ -367,7 +367,7 @@ void check_submissions_paths() {
 		 * We need read to check for old turnins. Write to turnin the new one and
 		 * Execute because it is a directory */
 		if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
-			fprintf(stderr, "turnin: %s has invalid permissions. Please mention to the instructor or TAs\n",
+			fprintf(stderr, "turnin: %s has invalid permissions. Please mention to the instructor or the TAs\n",
 			        submissions_paths);
 			exit(1);
 		}
@@ -506,14 +506,14 @@ void setup(char *arg) {
 
 	/* Does class own this directory? */
 	if (stat.st_uid != class_uid) {
-		fprintf(stderr, "turnin: %s not owned by %s.  Please mention this to the instructor or TAs.\n",
+		fprintf(stderr, "turnin: %s not owned by %s.  Please mention this to the instructor or the TAs.\n",
 		        assignment_path, class);
 		exit(1);
 	}
 
 	/* Is it a directory ? */
 	if ((stat.st_mode & S_IFMT) != S_IFDIR) {
-		fprintf(stderr, "turnin: %s not a directory.  Please mention this to the instructor or TAs.\n",
+		fprintf(stderr, "turnin: %s not a directory.  Please mention this to the instructor or the TAs.\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -522,7 +522,7 @@ void setup(char *arg) {
 	 * We need read to check for old turnins. Write to turnin the new one and
 	 * Execute because it is a directory */
 	if ((stat.st_mode & S_IRWXU) != S_IRWXU) {
-		fprintf(stderr, "turnin: %s has invalid permissions. Please mention to the instructor or TAs\n",
+		fprintf(stderr, "turnin: %s has invalid permissions.  Please mention this to the instructor or the TAs\n",
 		        assignment_path);
 		exit(1);
 	}
@@ -1083,7 +1083,7 @@ void maketar() {
 	if (childstat) {
 		fprintf(stderr,
 		        "turnin: Subprocesses returned FAILED status: %x\n"
-		        "        Contact the instructor or TA\n",
+		        "        Contact the instructor or the TA\n",
 		        childstat);
 		(void) close(ofd);
 		if (lstat(assignment_path, &stat) != -1) {

@@ -131,7 +131,7 @@ if (user_files):
     saveturnin_on_time = int(numbers[0])
 
 if (saveturnin_late != 0 and saveturnin_on_time > saveturnin_late):
-    print " Warning! You have ON_TIME submissions newer then LATE!"
+    print " Warning! An on-time turn-in seems to be newer than a late turn-in!.  Please mention this to the instructor or the TAs."
 
 if (saveturnin_late > saveturnin_on_time):
     print " You have %d%% penalty on final grade" % (penalty)
