@@ -355,6 +355,14 @@ void check_submissions_paths() {
 				perror(submissions_paths);
 				exit(1);
 			}
+			if (lstat(submissions_paths, &stat) == -1) {
+				/* Should never reach here */
+				fprintf(stderr,
+				        "turnin: Something is wrong with the new directory %s.\n"
+				        "        Please mention this to the instructor or the TAs.\n",
+				        submissions_paths);
+				exit(1);
+			}
 		}
 
 		/* Does class own this directory? */
