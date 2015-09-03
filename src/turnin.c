@@ -225,8 +225,7 @@ void be_class() {
 		perror("setegid root");
 		exit(1);
 	}
-/*
- */
+
 	if ( setegid(class_gid) == -1 ) {
 		perror("setegid class");
 		exit(1);
@@ -430,8 +429,7 @@ void setup(char *arg) {
 	int    file_exists;
 
 	/* Check if it was compiled/setup properly */
-	if (geteuid() != 0)
-	{
+	if (geteuid() != 0) {
 		fprintf(stderr,
 		        "turnin: turnin must be compiled and installed as root.\n"
 		        "        Please report this issue to the system administrators.\n");
@@ -1189,15 +1187,15 @@ void maketar() {
  */
 char *sha2string (unsigned char sha[SHA256_DIGEST_LENGTH]) {
 	static char string[65]; /* Effectively global */
-    int i = 0;
+	int i = 0;
 
-    for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-	    sprintf(string + (i * 2), "%02x", sha[i]);
-    }
+	for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+		sprintf(string + (i * 2), "%02x", sha[i]);
+	}
 
-    string[64] = '\0';
+	string[64] = '\0';
 
-    return string;
+	return string;
 }
 
 /*
@@ -1272,7 +1270,7 @@ void writelog() {
 	                             * 64 for the sha256
 	                             * 8 for the username
 	                             * 10 for the number of turnins
-															 * 3 for the penalty
+	                             * 3 for the penalty
 	                             * 1 for '\0'
 	                             * +1 to make it even
 	                             */
@@ -1339,7 +1337,7 @@ void writelog() {
 
 void checkdue() {
 	FILE *fd;
-  struct tm *tm_curr;
+	struct tm *tm_curr;
 	time_t curr_time;
 	double diff_time;
 	int diff_days;
@@ -1393,10 +1391,10 @@ int main(int argc, char* argv[]) {
 
 	if (argc > 1) {
 		if( strstr(argv[1], "-h") || strstr(argv[1], "--help"))
-		    usage();
+			usage();
 
 		if( strstr(argv[1], "-V") || strstr(argv[1], "--version"))
-		    version();
+			version();
 
 		if (argc < 3)
 			usage();
@@ -1413,7 +1411,7 @@ int main(int argc, char* argv[]) {
 
 	setup(argv[1]);
 
-  checkdue();
+	checkdue();
 
 	argv += 2; argc -= 2;
 	while (argc--)
