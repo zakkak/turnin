@@ -302,7 +302,6 @@ void wanttocontinue() {
  * Find longest submissions path
  * Using for malloc
  */
-
 int find_longest_sub_path() {
 	unsigned int i;
 	int current, longest_path = 0;
@@ -347,8 +346,14 @@ void check_submissions_paths() {
 
 		/* Does it exist? */
 		if (lstat(submissions_paths, &stat) == -1) {
-			perror(submissions_paths);
-			exit(1);
+			/* If not create them */
+			if (mkdir(submissions_paths,
+			          S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1) {
+				fprintf(stderr, "turnin: Failed to create directory %s.  Please mention this to the instructor or the TAs.\n",
+				        submissions_paths);
+				perror(submissions_paths);
+				exit(1);
+			}
 		}
 
 		/* Does class own this directory? */
