@@ -93,10 +93,9 @@
 
 #define MAX_PATH_LENGTH 4096
 
-char *user_name;
-
-char *assignment, *class;
-int  class_uid, user_uid, class_gid, user_gid;
+char         *user_name;
+char         *assignment, *class;
+unsigned int class_uid, user_uid, class_gid, user_gid;
 
 int maxfiles       =  100;
 int maxkbytes      = 1000;
@@ -305,7 +304,8 @@ void wanttocontinue() {
  */
 
 int find_longest_sub_path() {
-	int i, current, longest_path = 0;
+	unsigned int i;
+	int current, longest_path = 0;
 
 	for (i = 0; i < sizeof(assignment_path_files)/sizeof(char*) ;i++) {
 		current = strlen(assignment_path_files[i]);
@@ -321,7 +321,7 @@ void check_submissions_paths() {
 	char *submissions_paths;
 	int longest_path = 0;
 	int path_len = 0;
-	int i;
+	unsigned int i;
 	struct stat stat;
 
 	/* find longest submissions path */
