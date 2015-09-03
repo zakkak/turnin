@@ -1,12 +1,16 @@
 CHANGELOG:
 
+2015-08-21  ru108 <https://github.com/ru108>
+   - Add support for late submissions
+   - Release v3.0.0
+
 2014-10-08  Foivos S. Zakkak <foivos@zakkak.net>
    - Split version from main source code
 
 2014-10-08  Foivos S. Zakkak <foivos@zakkak.net>
    - Fix bug when turning in directories and include the trailing '/' like
      , i.e., `turnin as1@c1 as1/`
-   - Release 2.3.1
+   - Release v2.3.1
 
 2014-10-07 Antonios A. Chariton <daknob@tolabaki.gr>
    - Added verify-turnin to verify a turnin
