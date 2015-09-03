@@ -7,6 +7,7 @@
  * Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>
  * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and
  *                     Antonios Chariton<daknob@tolabaki.gr>
+ * Copyright 2015      Foivos S. Zakkak <foivos@zakkak.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -167,6 +168,7 @@ void version() {
 	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
 	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and\n"
 	        "                    Antonios Chariton<daknob@tolabaki.gr>\n\n"
+	        "Copyright 2015      Foivos S. Zakkak <foivos@zakkak.net>\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
