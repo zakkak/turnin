@@ -1362,8 +1362,7 @@ void checkdue() {
 		penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
 
 		if (penalty >= 100) {
-			fprintf(stderr, "\n*** MAX (%d) PENALTY REACHED FOR %s ***\n",
-			        penalty, user_name);
+			fprintf(stderr, "\n*** The penalty, due to late turn in, is over 100%% ***\n");
 			fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
 			exit(1);
 		}
@@ -1383,7 +1382,9 @@ void checkdue() {
 		fprintf(stderr, "******************************************\n");
 		(void) fclose(fd);
 	}
-	fprintf(stderr, "\n*** You have %d%% penalty on final grade ***\n", penalty);
+	fprintf(stderr,
+	        "\n*** This turn in will get %d%% penalty, due to late turn in, on the final grade ***\n",
+	        penalty);
 	wanttocontinue();
 }
 
