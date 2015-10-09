@@ -3,7 +3,7 @@
 ##########################################################################
 # The MIT License (MIT)                                                  #
 #                                                                        #
-# Copyright (c) 2014 Antonios A. Chariton <daknob@tolabaki.gr>           #
+# Copyright (c) 2014 Antonios A. Chariton <daknob.mac@gmail.com>         #
 #                                                                        #
 # Permission is hereby granted, free of charge, to any person obtaining  #
 # a copy of this software and associated documentation files (the        #
@@ -48,7 +48,7 @@ def usage():
 def versionstuff():
     print (" verify-turnin v" + ver)
     print " Copyright: "
-    print " Copyright (c) 2014 \tAntonios A. Chariton \t<daknob@tolabaki.gr> "
+    print " Copyright (c) 2014 \tAntonios A. Chariton \t<daknob.mac@gmail.com> "
     print " License: "
     print " The current file is under the MIT License. "
     print " You can obtain a copy of the license here: <http://opensource.org/licenses/MIT> "

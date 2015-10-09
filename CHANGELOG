@@ -12,7 +12,7 @@ CHANGELOG:
      , i.e., `turnin as1@c1 as1/`
    - Release v2.3.1
 
-2014-10-07 Antonios A. Chariton <daknob@tolabaki.gr>
+2014-10-07 Antonios A. Chariton <daknob.mac@gmail.com>
    - Added verify-turnin to verify a turnin
    - Renamed the scripts for extraction
    - Release v2.3
@@ -25,11 +25,11 @@ CHANGELOG:
    - Fix Ignore hidden files or directories logic
    - Release 2.2.2
 
-2014-09-27 Antonios A. Chariton <daknob@tolabaki.gr>
+2014-09-27 Antonios A. Chariton <daknob.mac@gmail.com>
    - Make error messages friendlier to the user
    - Optimize wanttocontinue() and remove static buffer
 
-2014-09-26 Antonios A. Chariton <daknob@tolabaki.gr>
+2014-09-26 Antonios A. Chariton <daknob.mac@gmail.com>
    - Fix issue where turn ins have the user's group id
    - Fix issue where LOGFILE and SHA256 have the group id of the first user
      who turned in
@@ -39,7 +39,7 @@ CHANGELOG:
    - Fix decompression problems with symlink
    - Release v2.2
 
-2014-09-21 Antonios A. Chariton <daknob@tolabaki.gr>
+2014-09-21 Antonios A. Chariton <daknob.mac@gmail.com>
    - Fix turnin out of bounds
    - Release v2.1
 
@@ -49,7 +49,7 @@ CHANGELOG:
    - Some enhancements
    - Release v2.0
 
-2014-09-18 Antonios A. Chariton <daknob@tolabaki.gr>
+2014-09-18 Antonios A. Chariton <daknob.mac@gmail.com>
    - Fix a problem that made SHA-256 calculation impossible
 
 2014-09-06 Foivos S. Zakkak <foivos@zakkak.net>

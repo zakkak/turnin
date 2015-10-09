@@ -2,7 +2,7 @@
 #
 # Copyright 1993      Paul Eggert
 # Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and
-#                     Antonios A. Chariton <daknob@tolabaki.gr>
+#                     Antonios A. Chariton <daknob.mac@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
