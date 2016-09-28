@@ -28,15 +28,16 @@
  * account.  For each assignment, a further subdirectory must be created
  * bearing the name of the assignment (e.g.  ~class/TURNIN/as2).
  *
- * If the assignment directory contains the file 'LOCK' turnins will not be
- * accepted.
- *
  * If there is a file 'LIMITS', it is examined for lines like:
  *
- *    maxfiles   100
- *    maxkbytes  1000
- *    maxturnins 10
- *    binary     1
+ * maxfiles 100
+ * maxkbytes 1000
+ * maxturnins 10
+ * binary 0
+ * daypenalty 10
+ * weekendpenalty 5
+ * duedate YYYYMMDD HH:MM
+ * lockdate YYYYMMDD HH:MM
  *
  * which are used to modify the default values governing student turnins of
  * assignments (the default values are shown above).
