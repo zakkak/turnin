@@ -48,6 +48,10 @@ ifdef GIT
 	  echo ' SED version.sed.me';\
 	  mkdir -p $(dir $@);\
 	  sed -r 's/^(char \*turninversion = ").*(";)/\1'`git describe`'\2/' $< > $@;\
+	else\
+	  rm -f $@;\
+	  mkdir -p $(dir $@);\
+	  cp $< $@;\
 	fi;
 else
 	@rm -f $@
