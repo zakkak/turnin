@@ -104,7 +104,7 @@ if (not(isDir(classDir + "/TURNIN/" + assignment))):    # Check if the assignmen
     print " Could not find assignment directory "
     exit(3)                 # Could not find assignment
 
-grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' | grep -v '>' > /dev/null 2> /dev/null")
+grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' > /dev/null 2> /dev/null")
 if( grep != 0 ):
     grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` > /dev/null 2> /dev/null")
     if ( grep == 0 ):

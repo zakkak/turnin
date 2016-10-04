@@ -1,5 +1,9 @@
 CHANGELOG:
 
+2016-10-04  Foivos S. Zakkak <foivos@zakkak.net>
+   - Fix bug in verify-turnin
+   - Release v3.1.2
+
 2016-09-30  Foivos S. Zakkak <foivos@zakkak.net>
    - Fix verify-turnin to work with late/on_time folder structure
    - Release v3.1.1
