@@ -1358,7 +1358,6 @@ void checkdue() {
 	diff_time = difftime(curr_time, duedate);
 	if (diff_time < 0) return;
 	// calculate different days
-	diff_time += 86400; // Advance one day to get penalty even when late for less than 24 hours
 	diff_days = (int)diff_time / 86400; // in days
 
 	// calculate penalty
