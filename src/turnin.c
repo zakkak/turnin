@@ -413,6 +413,7 @@ int check_date(char *str_date, time_t *t) {
 	if (strptime(str_date, "%Y%m%d %H:%M", &tm) == NULL)
 		return 0;
 
+	tm.tm_isdst = -1;
 	*t = mktime(&tm);
 	if (*t == -1)
 		return 0;
