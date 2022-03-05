@@ -70,7 +70,7 @@ def tryint(s):
     try:
         return int(s)
     except ValueError:
-        return s  # should we exit?
+        return s
 
 
 def alphanum_key(s):
