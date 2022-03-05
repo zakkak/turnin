@@ -150,6 +150,4 @@ def main():
 
 
 if __name__ == "__main__":
-
-    print(get_user_files("/on_time", "~hy118b", "set1"))
-
+    main()
