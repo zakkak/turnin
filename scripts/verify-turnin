@@ -97,7 +97,7 @@ def main():
         versionstuff()
         exit(0)
 
-    if not ("@" in sys.argv[1]):  # Check if the argument supplied is indeed "properly" formatted
+    if not ("@" in sys.argv[1]) or (sys.argv[1].count('@') != 1):  # Check if the argument supplied is indeed "properly" formatted
         usage()
         exit(1)
 
