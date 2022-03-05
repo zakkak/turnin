@@ -119,11 +119,11 @@ def main():
         "ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' > /dev/null 2> /dev/null")
     if grep != 0:
         grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` > /dev/null 2> /dev/null")
-    if grep == 0:
-        print(" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
-    else:
-        print(" You have not turned in " + assignment + " for " + course + "! ")
-    exit(0)
+        if grep == 0:
+            print(" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
+        else:
+            print(" You have not turned in " + assignment + " for " + course + "! ")
+            exit(0)
 
     print(" You have successfully turned in " + assignment + " for " + course + " ")
 
