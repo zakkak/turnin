@@ -38,7 +38,7 @@ import os
 import re
 import sys
 
-ver = "1.0"
+ver = "1.1"
 
 
 def usage():
@@ -53,7 +53,8 @@ def usage():
 def versionstuff():
     print(" verify-turnin v" + ver)
     print(" Copyright: ")
-    print(" Copyright (c) 2014 \tAntonios A. Chariton \t<daknob.mac@gmail.com> ")
+    print(" Copyright (c) 2014 \tAntonios   A. Chariton    \t<daknob.mac@gmail.com> ")
+    print(" Copyright (c) 2022 \tAlexandros K. Antonakakis \t<antonakakis1@gmail.com> ")
     print(" License: ")
     print(" The current file is under the MIT License. ")
     print(" You can obtain a copy of the license here: <http://opensource.org/licenses/MIT> ")
