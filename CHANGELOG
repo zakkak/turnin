@@ -1,5 +1,10 @@
 CHANGELOG:
 
+2022-03-05 Alexandros K. Antonakakis <antonakakis1@gmail.com>
+   - Added support for python3 in verify-turnin
+   - Added info on verify-turnin in man page
+   - Release v3.1.4
+
 2016-10-29  Foivos S. Zakkak <foivos@zakkak.net>
    - Revert "Fix penalty for less than 24hours delay"
    - Fix mktime() daylight saving changes
