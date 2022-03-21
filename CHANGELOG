@@ -1,8 +1,8 @@
 CHANGELOG:
 
 2022-03-05 Alexandros K. Antonakakis <antonakakis1@gmail.com>
-   - Added support for python3 in verify-turnin
-   - Added info on verify-turnin in man page
+   - Add support for python3 in verify-turnin
+   - Add info on verify-turnin in man page
    - Release v3.1.4
 
 2016-10-29  Foivos S. Zakkak <foivos@zakkak.net>
@@ -36,7 +36,7 @@ CHANGELOG:
    - Release v2.3.1
 
 2014-10-07 Antonios A. Chariton <daknob.mac@gmail.com>
-   - Added verify-turnin to verify a turnin
+   - Add verify-turnin to verify a turnin
    - Renamed the scripts for extraction
    - Release v2.3
 
