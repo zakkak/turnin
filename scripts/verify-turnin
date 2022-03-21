@@ -34,15 +34,12 @@
 
 import fnmatch
 import getpass
-import os
+import os # sometime maybe replace os with subproccess for additional control
 import re
 import sys
 
-ver = "1.1"
-
-
 def usage():
-    print(" verify-turnin v" + ver)
+    os.system("turnin -V")
     print(" Usage: ")
     print(" verify-turnin assignment@course ")
     print(" \tVerify the turnin has been successful ")
@@ -51,7 +48,8 @@ def usage():
 
 
 def versionstuff():
-    print(" verify-turnin v" + ver)
+    #print(" verify-turnin v" + ver)
+    os.system("turnin -V")
     print(" Copyright: ")
     print(" Copyright (c) 2014 \tAntonios   A. Chariton    \t<daknob.mac@gmail.com> ")
     print(" Copyright (c) 2022 \tAlexandros K. Antonakakis \t<antonakakis1@gmail.com> ")
@@ -90,6 +88,11 @@ def get_user_files(path, classDir, assignment):
 
 
 def main():
+
+    if not isDir("/bin/turnin"): # turnin not installed
+        print(" Turnin is not installed - send this to a system admin ");
+        exit(1);
+
     if len(sys.argv) != 2:  # On improper calls, return usage information
         usage()
         exit(1)  # Improper Call
