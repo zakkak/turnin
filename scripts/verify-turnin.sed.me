@@ -1,0 +1,155 @@
+#!/usr/bin/python3
+
+##########################################################################
+# The MIT License (MIT)                                                  #
+#                                                                        #
+# Copyright (c) 2014 Antonios A. Chariton <daknob.mac@gmail.com>         #
+#                                                                        #
+# Permission is hereby granted, free of charge, to any person obtaining  #
+# a copy of this software and associated documentation files (the        #
+# "Software"), to deal in the Software without restriction, including    #
+# without limitation the rights to use, copy, modify, merge, publish,    #
+# distribute, sublicense, and/or sell copies of the Software, and to     #
+# permit persons to whom the Software is furnished to do so, subject to  #
+# the following conditions:                                              #
+#                                                                        #
+# The above copyright notice and this permission notice shall be         #
+# included in all copies or substantial portions of the Software.        #
+#                                                                        #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        #
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     #
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND                  #
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE #
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION #
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION  #
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.        #
+##########################################################################
+
+##########################################################################
+#                                                                        #
+# Verifies if the current user has successfully turned in an             #
+# assignment for assignment in class.                                    #
+#                                                                        #
+##########################################################################
+
+import fnmatch
+import getpass
+import os
+import subprocess
+import re
+import sys
+
+
+ver = "sed.me"
+
+def usage():
+    print(" verify-turnin " + ver) 
+    print(" Usage: ")
+    print(" verify-turnin assignment@course ")
+    print(" \tVerify the turnin has been successful ")
+    print(" verify-turnin -V ")
+    print(" \tShow Copyright and Version information ")
+
+
+def versionstuff():
+    print(" verify-turnin " + ver)
+    print(" Copyright: ")
+    print(" Copyright (c) 2014 \tAntonios   A. Chariton    \t<daknob.mac@gmail.com> ")
+    print(" Copyright (c) 2022 \tAlexandros K. Antonakakis \t<antonakakis1@gmail.com> ")
+    print(" License: ")
+    print(" The current file is licensed under the MIT License. ")
+    #print(" You can obtain a copy of the license here: <http://opensource.org/licenses/MIT> ")
+    #print(" Development: ")
+
+
+def isDir(path):
+    return os.path.exists(path) and os.path.isdir(path)
+
+
+def tryint(s):
+    try:
+        return int(s)
+    except ValueError:
+        return s
+
+
+def alphanum_key(s):
+    """ Turn a string into a list of string and number chunks.
+        "z23a" -> ["z", 23, "a"]
+    """
+    return [tryint(c) for c in re.split('([0-9]+)', s)]
+
+
+def get_user_files(path, classDir, assignment):
+    user_files = [f
+                  for files in next(os.walk(classDir + "/TURNIN/" + assignment + path))
+                  for f in fnmatch.filter(files, getpass.getuser() + '*.tgz')]
+    user_files.sort(key=alphanum_key)
+
+    return user_files
+
+
+def main():
+
+    if len(sys.argv) != 2:  # On improper calls, return usage information
+        usage()
+        exit(1)  # Improper Call
+
+    if sys.argv[1] == "-V" or sys.argv[1] == "-v":  # Handle version and copyright
+        versionstuff()
+        exit(0)
+
+    if not ("@" in sys.argv[1]) or (sys.argv[1].count('@') != 1):  # Check if the argument supplied is indeed "properly" formatted
+        usage()
+        exit(1)
+
+    argz = sys.argv[1].split("@")  # Split the argument supplied by using @ as a delimiter
+    assignment = argz[0]  # The first field is the assignment
+    course = argz[1]  # The second field is the course
+    # For the others we don't *really* care that much :P
+
+    classDir = os.path.expanduser("~" + course)
+
+    if not (isDir(classDir)):  # Check if the user has a home directory
+        print(" Could not find specified course ")
+        exit(2)  # Could not find course
+    if not (isDir(classDir + "/TURNIN/" + assignment)):  # Check if the assignment exists
+        print(" Could not find assignment directory ")
+        exit(3)  # Could not find assignment
+
+    grep = os.system(
+        "ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' > /dev/null 2> /dev/null")
+    if grep != 0:
+        grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` > /dev/null 2> /dev/null")
+        if grep == 0:
+            print(" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
+        else:
+            print(" You have not turned in " + assignment + " for " + course + "! ")
+            exit(0)
+
+    print(" You have successfully turned in " + assignment + " for " + course + " ")
+
+    penalty = 0
+    saveturnin_late = 0
+    saveturnin_on_time = 0
+
+    user_files = get_user_files("/late", classDir, assignment)
+    if user_files:
+        numbers = re.findall(r'\d+', user_files[-1])
+        saveturnin_late = int(numbers[0])
+        penalty = int(numbers[-1])
+
+    user_files = get_user_files("/on_time", classDir, assignment)
+    if user_files:
+        numbers = re.findall(r'\d+', user_files[-1])
+        saveturnin_on_time = int(numbers[0])
+
+    if saveturnin_late != 0 and saveturnin_on_time > saveturnin_late:
+        print("Warning! An on-time turn-in seems to be newer than a late turn-in!.  Please mention this to the "
+              "instructor or the TAs.")
+    elif saveturnin_late > 0:
+        print(" You have %d%% penalty on final grade" % penalty)
+
+
+if __name__ == "__main__":
+    main()
