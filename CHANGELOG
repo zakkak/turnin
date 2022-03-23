@@ -37,7 +37,7 @@ CHANGELOG:
 
 2014-10-07 Antonios A. Chariton <daknob.mac@gmail.com>
    - Add verify-turnin to verify a turnin
-   - Renamed the scripts for extraction
+   - Rename the scripts for extraction
    - Release v2.3
 
 2014-09-27  Foivos S. Zakkak <foivos@zakkak.net>
@@ -56,7 +56,7 @@ CHANGELOG:
    - Fix issue where turn ins have the user's group id
    - Fix issue where LOGFILE and SHA256 have the group id of the first user
      who turned in
-   - Relese v2.2.1
+   - Release v2.2.1
 
 2014-09-26 Foivos S. Zakkak <foivos@zakkak.net>
    - Fix decompression problems with symlink
@@ -99,7 +99,7 @@ CHANGELOG:
    - Add license notice
 
 2014-09-02 Foivos S. Zakkak <foivos@zakkak.net>
-   - Fixed Feature macros
+   - Fix Feature macros
    - Check for proper values in LIMITS
    - Use only tar (czf) for both the archiving and the compression
      Now, it works something like this:
@@ -118,14 +118,14 @@ CHANGELOG:
 
 2014-09-01 Foivos S. Zakkak <foivos@zakkak.net>
    - Recursively check symlinks to get to the actual file
-   - Reduced use of strcpy
-   - Reduced attack surface
+   - Reduce use of strcpy
+   - Reduce attack surface
    - Ignore signals at the beginning (can't get interrupted while privileged)
    - Files renamed to *.tgz not *.tar.Z anymore
    - Some comments
    - isbinaryfile only checks for 0 since 0x80 results in false positives in
      unicode
-   - Removed EQS define
+   - Remove EQS define
    - Rename shufflenames to movetar
    - Add return type in functions
    - Remove unused variables
@@ -136,7 +136,7 @@ CHANGELOG:
    - Reuse `wanttocontinue` for "already submitted prompt"
 
 2010-11-04  Bryce Boe <bboe@cs.ucsb.edu>
-   - Fixed ".." and "." in project name bug.
+   - Fix ".." and "." in project name bug.
    - Also added exit(1) for user aborted exits.
 
 v1.4: Jeff Sheltren <sheltren@cs.ucsb.edu>
