@@ -86,13 +86,29 @@ turnin: check $(OBJECTS)
 	@echo ' LD ' $@
 	@$(CC) $(CFLAGS) $(OBJECTS) -o turnin $(LDFLAGS)
 
-install: check turnin uninstall
+install: check turnin uninstall $(DESTDIR)/bin/verify-turnin
 	@echo ' INST'
 	cp -p turnin $(DESTDIR)/bin/
 	chmod ug+s $(DESTDIR)/bin/turnin
 	cp -p man/turnin.1 $(DESTDIR)/share/man/man1/
-	cp -p scripts/verify-turnin $(DESTDIR)/bin
 	chmod 755 $(DESTDIR)/bin/verify-turnin
+
+$(DESTDIR)/bin/verify-turnin: scripts/verify-turnin.sed.me
+ifdef GIT
+	@if [ -d .git ]; then\
+		echo ' SED verify-turnin.sed.me';\
+		mkdir -p $(dir $@);\
+		sed -r 's/^(ver = ").*(")/\1'`git describe`'\2/' $< > $@;\
+		else\
+		rm -rf $@;\
+		mkdir -p $(dir $a);\
+		cp $< $@;\
+		fi;
+else
+	@rm -rf $@
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
 
 uninstall: check
 	-rm -f \
