@@ -35,15 +35,14 @@
 import fnmatch
 import getpass
 import os
-import subprocess
 import re
 import sys
 
 
-ver = "v3.1.4"
+VER = "v3.1.4"
 
 def usage():
-    print(" verify-turnin " + ver)
+    print(" verify-turnin " + VER)
     print(" Usage: ")
     print(" verify-turnin assignment@course ")
     print(" \tVerify the turnin has been successful ")
@@ -52,7 +51,7 @@ def usage():
 
 
 def versionstuff():
-    print(" verify-turnin " + ver)
+    print(" verify-turnin " + VER)
     print(" Copyright: ")
     print(" Copyright (c) 2014 \tAntonios   A. Chariton    \t<daknob.mac@gmail.com> ")
     print(" Copyright (c) 2022 \tAlexandros K. Antonakakis \t<antonakakis1@gmail.com> ")
@@ -62,27 +61,27 @@ def versionstuff():
     print(" Development: ")
     print(" Source Code available on GitHub: <https://github.com/zakkak/turnin> ")
 
-def isDir(path):
+def is_dir(path):
     return os.path.exists(path) and os.path.isdir(path)
 
 
-def tryint(s):
+def tryint(string):
     try:
-        return int(s)
+        return int(string)
     except ValueError:
-        return s
+        return string
 
 
-def alphanum_key(s):
+def alphanum_key(string):
     """ Turn a string into a list of string and number chunks.
         "z23a" -> ["z", 23, "a"]
     """
-    return [tryint(c) for c in re.split('([0-9]+)', s)]
+    return [tryint(c) for c in re.split('([0-9]+)', string)]
 
 
-def get_user_files(path, classDir, assignment):
+def get_user_files(path, class_dir, assignment):
     user_files = [f
-                  for files in next(os.walk(classDir + "/TURNIN/" + assignment + path))
+                  for files in next(os.walk(class_dir + "/TURNIN/" + assignment + path))
                   for f in fnmatch.filter(files, getpass.getuser() + '*.tgz')]
     user_files.sort(key=alphanum_key)
 
@@ -91,41 +90,49 @@ def get_user_files(path, classDir, assignment):
 
 def main():
 
-    if len(sys.argv) != 2:  # On improper calls, return usage information
+    # On improper calls, return usage information
+    if len(sys.argv) != 2:
         usage()
-        exit(1)  # Improper Call
+        sys.exit(1)  # Improper Call
 
-    if sys.argv[1] == "-V" or sys.argv[1] == "-v":  # Handle version and copyright
+    # Handle version and copyright
+    if sys.argv[1] == "-V" or sys.argv[1] == "-v":
         versionstuff()
-        exit(0)
+        sys.exit(0)
 
-    if not ("@" in sys.argv[1]) or (sys.argv[1].count('@') != 1):  # Check if the argument supplied is indeed "properly" formatted
+    # Check if the argument supplied is indeed "properly" formatted
+    if not ("@" in sys.argv[1]) or (sys.argv[1].count('@') != 1):
         usage()
-        exit(1)
+        sys.exit(1)
 
-    argz = sys.argv[1].split("@")  # Split the argument supplied by using @ as a delimiter
+    # Split the argument supplied by using @ as a delimiter
+    argz = sys.argv[1].split("@")
     assignment = argz[0]  # The first field is the assignment
     course = argz[1]  # The second field is the course
     # For the others we don't *really* care that much :P
 
-    classDir = os.path.expanduser("~" + course)
+    class_dir = os.path.expanduser("~" + course)
 
-    if not (isDir(classDir)):  # Check if the user has a home directory
+    # Check if the user has a home directory
+    if not is_dir(class_dir):
         print(" Could not find specified course ")
-        exit(2)  # Could not find course
-    if not (isDir(classDir + "/TURNIN/" + assignment)):  # Check if the assignment exists
+        sys.exit(2)  # Could not find course
+    # Check if the assignment exists
+    if not is_dir(class_dir + "/TURNIN/" + assignment):
         print(" Could not find assignment directory ")
-        exit(3)  # Could not find assignment
+        sys.exit(3)  # Could not find assignment
 
-    grep = os.system(
-        "ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` | grep -v '#' > /dev/null 2> /dev/null")
+    grep = os.system("ls -l '" + class_dir + "/TURNIN/" + assignment +
+                     "' | grep `whoami` | grep -v '#' > /dev/null 2> /dev/null")
     if grep != 0:
-        grep = os.system("ls -l '" + classDir + "/TURNIN/" + assignment + "' | grep `whoami` > /dev/null 2> /dev/null")
+        grep = os.system("ls -l '" + class_dir + "/TURNIN/" + assignment +
+                         "' | grep `whoami` > /dev/null 2> /dev/null")
         if grep == 0:
-            print(" You have attempted to turn in " + assignment + " for " + course + " but it is not valid.")
+            print(" You have attempted to turn in " + assignment +
+                  " for " + course + " but it is not valid.")
         else:
             print(" You have not turned in " + assignment + " for " + course + "! ")
-            exit(0)
+            sys.exit(0)
 
     print(" You have successfully turned in " + assignment + " for " + course + " ")
 
@@ -133,20 +140,20 @@ def main():
     saveturnin_late = 0
     saveturnin_on_time = 0
 
-    user_files = get_user_files("/late", classDir, assignment)
+    user_files = get_user_files("/late", class_dir, assignment)
     if user_files:
         numbers = re.findall(r'\d+', user_files[-1])
         saveturnin_late = int(numbers[0])
         penalty = int(numbers[-1])
 
-    user_files = get_user_files("/on_time", classDir, assignment)
+    user_files = get_user_files("/on_time", class_dir, assignment)
     if user_files:
         numbers = re.findall(r'\d+', user_files[-1])
         saveturnin_on_time = int(numbers[0])
 
     if saveturnin_late != 0 and saveturnin_on_time > saveturnin_late:
-        print("Warning! An on-time turn-in seems to be newer than a late turn-in!.  Please mention this to the "
-              "instructor or the TAs.")
+        print("Warning! An on-time turn-in seems to be newer than a late turn-in!."
+              "  Please mention this to the instructor or the TAs.")
     elif saveturnin_late > 0:
         print(" You have %d%% penalty on final grade" % penalty)
 

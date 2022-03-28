@@ -98,7 +98,7 @@ ifdef GIT
 	@if [ -d .git ]; then\
 		echo ' SED verify-turnin.sed.me';\
 		mkdir -p $(dir $@);\
-		sed -r 's/^(ver = ").*(")/\1'`git describe`'\2/' $< > $@;\
+		sed -r 's/^(VER = ").*(")/\1'`git describe`'\2/' $< > $@;\
 		else\
 		rm -rf $@;\
 		mkdir -p $(dir $a);\
