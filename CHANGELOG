@@ -1,10 +1,14 @@
 CHANGELOG:
 
+2022-03-24 Foivos S. Zakkak <foivos@zakkak.net>
+   - Make verify-turnin score 10/10 in pylint
+   - Ensure necessary directories are present at DESTDIR
+   - Release v3.1.4
+
 2022-03-24 Alexandros K. Antonakakis <antonakakis1@gmail.com>
    - Make verify-turnin work with python 3
    - Add verify-turnin usage info in man page
    - Make verify-turnin's version same with turnin's version
-   - Release v3.1.4
 
 2016-10-29  Foivos S. Zakkak <foivos@zakkak.net>
    - Revert "Fix penalty for less than 24hours delay"

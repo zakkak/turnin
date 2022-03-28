@@ -88,8 +88,10 @@ turnin: check $(OBJECTS)
 
 install: check turnin uninstall $(DESTDIR)/bin/verify-turnin
 	@echo ' INST'
+	mkdir -p $(DESTDIR)/bin/
 	cp -p turnin $(DESTDIR)/bin/
 	chmod ug+s $(DESTDIR)/bin/turnin
+	mkdir -p $(DESTDIR)/share/man/man1/
 	cp -p man/turnin.1 $(DESTDIR)/share/man/man1/
 	chmod 755 $(DESTDIR)/bin/verify-turnin
 
