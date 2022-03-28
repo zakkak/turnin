@@ -7,7 +7,7 @@
  * Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>
  * Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and
  *                     Antonios Chariton<daknob.mac@gmail.com>
- * Copyright 2015-2016 Foivos S. Zakkak <foivos@zakkak.net>
+ * Copyright 2015-2022 Foivos S. Zakkak <foivos@zakkak.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -64,9 +64,8 @@
  *
  ******************************************************************************/
 
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #define _XOPEN_SOURCE
-#define _XOPEN_SOURCE_EXTENDED
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -168,7 +167,7 @@ void version() {
 	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
 	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and\n"
 	        "                    Antonios Chariton<daknob.mac@gmail.com>\n"
-	        "Copyright 2015-2016 Foivos S. Zakkak <foivos@zakkak.net>\n\n"
+	        "Copyright 2015-2022 Foivos S. Zakkak <foivos@zakkak.net>\n\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
@@ -1398,6 +1397,19 @@ void checkdue() {
 	wanttocontinue();
 }
 
+void ignore_signal(int signum) {
+	struct sigaction previous_action;
+
+	if (sigaction(signum, NULL, &previous_action) == -1) {
+		perror("turnin: Failed to get previous sigaction");
+	} else if (previous_action.sa_handler == SIG_DFL) {
+		previous_action.sa_handler = SIG_IGN;
+		if (sigaction(signum, &previous_action, NULL) == -1) {
+			perror("turnin: Failed to set sigaction");
+		}
+	}
+}
+
 int main(int argc, char* argv[]) {
 
 	if (argc > 1) {
@@ -1413,12 +1425,12 @@ int main(int argc, char* argv[]) {
 		usage();
 
 	/* Disable signals BEFORE we become class or root or whatever... */
-	(void) sigignore(SIGINT);
-	(void) sigignore(SIGTSTP);
-	(void) sigignore(SIGQUIT);
-	(void) sigignore(SIGHUP);
-	(void) sigignore(SIGTTIN);
-	(void) sigignore(SIGTTOU);
+	ignore_signal(SIGINT);
+	ignore_signal(SIGTSTP);
+	ignore_signal(SIGQUIT);
+	ignore_signal(SIGHUP);
+	ignore_signal(SIGTTIN);
+	ignore_signal(SIGTTOU);
 
 	setup(argv[1]);
 
