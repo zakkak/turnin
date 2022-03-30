@@ -20,7 +20,7 @@
 ###############################################################################
 
 CC      := gcc
-CFLAGS  := -Wall -I./src
+CFLAGS  := -Wall -pthread -I./src
 LDFLAGS := -lcrypto
 EUID    := $(shell id -u -r)
 DESTDIR ?=/usr
