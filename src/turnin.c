@@ -89,6 +89,8 @@
 
 #include <glob.h>
 
+#include <pthread.h>
+
 #include "version.h"
 
 #define MAX_PATH_LENGTH 4096
@@ -1397,6 +1399,34 @@ void checkdue() {
 	wanttocontinue();
 }
 
+void *check_parent_or_die(void *nullptr)
+{
+	int parent_id = getppid();
+
+	while (getpgid(parent_id) != -1)
+	{
+		/* Parent process still running */
+		sleep(5);
+	}
+
+	/* Parent killed but turnin still running */
+	exit(1);
+}
+
+void spawn_thread(void)
+{
+	pthread_t thread;
+	int ret;
+
+	ret = pthread_create(&thread, NULL, check_parent_or_die, NULL);
+
+	if (ret) {
+		fprintf(stderr, "turnin: %s\n", strerror(ret));
+		exit(1);
+	}
+
+}
+
 void ignore_signal(int signum) {
 	struct sigaction previous_action;
 
@@ -1431,6 +1461,8 @@ int main(int argc, char* argv[]) {
 	ignore_signal(SIGHUP);
 	ignore_signal(SIGTTIN);
 	ignore_signal(SIGTTOU);
+
+	spawn_thread();
 
 	setup(argv[1]);
 
