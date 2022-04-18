@@ -1,5 +1,11 @@
 CHANGELOG:
 
+2022-04-18 Foivos S. Zakkak <foivos@zakkak.net>
+   - Exit turnin on EOF to avoid infinite loops in case of
+     redirection from wrongly formatted files or dropped ssh sessions
+     Thank you Alexandros K. Antonakakis for pointing out the issue
+   - Release v3.1.5
+
 2022-03-24 Foivos S. Zakkak <foivos@zakkak.net>
    - Make verify-turnin score 10/10 in pylint
    - Ensure necessary directories are present at DESTDIR
