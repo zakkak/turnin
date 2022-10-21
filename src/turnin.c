@@ -267,8 +267,11 @@ void wanttocontinue() {
 
 		switch (c) {
 		case EOF:
-			clearerr(stdin);
-			/* Fall through */
+			/* Abort on EOF to avoid infinite loops in case of dropped
+			 * ssh sessions or redirected input from non properly
+			 * formatted files */
+			fprintf(stderr, "\n**** ABORTING TURNIN - Input reached EOF ****\n");
+			exit(0);
 		case '\n':
 			continue;
 			break;
