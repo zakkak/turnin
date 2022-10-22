@@ -1,5 +1,12 @@
 CHANGELOG:
 
+2022-10-31 Alexandros K. Antonakakis <antonakakis1@gmail.com>
+   - Improve error messages on setuid for class and user
+   - Fix potential NULL pointer dereference on pw_name
+   - Replace localtime with localtime_r
+   - Fix potential NULL pointer dereference on localtime_r
+   - Release v3.1.6
+
 2022-10-28 Foivos S. Zakkak <foivos@zakkak.net>
    - Adding a simple github workflow for testing the repository
    - Return 0 when exiting from `turnin --version`
