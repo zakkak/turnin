@@ -444,6 +444,13 @@ void setup(char *arg) {
 		        user_uid);
 		exit(1);
 	}
+
+	if (!pwd->pw_name) {
+		fprintf(stderr,
+		        "turnin: Cannot lookup user_name (uid %d)\n"
+		        "        Please report this issue to the system administrators\n", user_uid);
+		exit(1);
+	}
 	user_name = strdup(pwd->pw_name);
 
 	/* Search for @ in the first argument and split it there */
