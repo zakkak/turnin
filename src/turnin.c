@@ -223,7 +223,7 @@ void be_class() {
 	}
 
 	if (seteuid(class_uid) == -1) {
-		perror("seteuid");
+		perror("seteuid class");
 		exit(1);
 	}
 }
@@ -243,7 +243,7 @@ void be_user() {
 		exit(1);
 	}
 	if (seteuid(user_uid) == -1) {
-		perror("seteuid");
+		perror("seteuid user");
 		exit(1);
 	}
 }
