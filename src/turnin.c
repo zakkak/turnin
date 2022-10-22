@@ -200,9 +200,16 @@ void check_assignment(char *s) {
 
 char *timestamp(time_t clock) {
 	char      *b = (char *)malloc(16);
-	struct tm *t = localtime(&clock);
+	struct tm  t;
+	struct tm *res = localtime_r(&clock, &t);
 
-	sprintf(b, "%02d/%02d/%02d %02d:%02d", t->tm_mon + 1, t->tm_mday, t->tm_year % 100, t->tm_hour, t->tm_min);
+	if (!res) {
+		fprintf(stderr, "turnin: Cannot create timestamp\n"
+		                "        Please report this issue to the system administrators\n");
+		exit(1);
+	}
+
+	sprintf(b, "%02d/%02d/%02d %02d:%02d", t.tm_mon + 1, t.tm_mday, t.tm_year % 100, t.tm_hour, t.tm_min);
 	return b;
 }
 
@@ -448,7 +455,8 @@ void setup(char *arg) {
 	if (!pwd->pw_name) {
 		fprintf(stderr,
 		        "turnin: Cannot lookup user_name (uid %d)\n"
-		        "        Please report this issue to the system administrators\n", user_uid);
+		        "        Please report this issue to the system administrators\n",
+		        user_uid);
 		exit(1);
 	}
 	user_name = strdup(pwd->pw_name);
@@ -1319,7 +1327,8 @@ void writelog() {
 
 void checkdue() {
 	FILE      *fd;
-	struct tm *tm_curr;
+	struct tm  tm_curr;
+	struct tm *res;
 	time_t     curr_time;
 	double     diff_time;
 	int        diff_days;
@@ -1336,14 +1345,24 @@ void checkdue() {
 	diff_days = (int)diff_time / 86400; // in days
 
 	// calculate penalty
-	tm_curr = localtime(&curr_time);
-	penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
+	res = localtime_r(&curr_time, &tm_curr);
+	if (!res) {
+		fprintf(stderr, "turnin: Cannot create timestamp to calculate initial penalty\n"
+		                "        Please report this issue to the system administrators\n");
+		exit(1);
+	}
+	penalty += (tm_curr.tm_wday == 0 || tm_curr.tm_wday == 6) ? weekendpenalty : daypenalty;
 
 	for (; diff_days > 0; diff_days--) {
 		curr_time -= 86400; // one day ago
-		tm_curr = localtime(&curr_time);
+		res = localtime_r(&curr_time, &tm_curr);
+		if (!res) {
+			fprintf(stderr, "turnin: Cannot create timestamp to calculate additional penalty\n"
+			                "        Please report this issue to the system administrators\n");
+			exit(1);
+		}
 
-		penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
+		penalty += (tm_curr.tm_wday == 0 || tm_curr.tm_wday == 6) ? weekendpenalty : daypenalty;
 
 		if (penalty >= 100) {
 			fprintf(stderr, "\n*** The penalty, due to late turn in, is over 100%% ***\n");
@@ -1405,6 +1424,8 @@ int main(int argc, char *argv[]) {
 	ignore_signal(SIGTTIN);
 	ignore_signal(SIGTTOU);
 
+	/* initialize tzname before creating timestamps */
+	tzset();
 	setup(argv[1]);
 
 	checkdue();
