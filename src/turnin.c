@@ -451,12 +451,6 @@ void setup(char *arg) {
 	/* get the user's login */
 	user_uid = getuid();
 
-	/* become *really* root to query the user's login */
-	if (setuid(0) == -1) {
-		perror("setuid(0)");
-		exit(2);
-	}
-
 	pwd = getpwuid(user_uid);
 
 	if (!pwd) {
