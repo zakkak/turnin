@@ -461,8 +461,6 @@ void setup(char *arg) {
 	}
 	user_name = strdup(pwd->pw_name);
 
-	be_user();
-
 	/* Search for @ in the first argument and split it there */
 	assignment = arg;
 	class = strchr(assignment, '@');
