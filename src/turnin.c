@@ -173,7 +173,7 @@ void version() {
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
 	        "The source code is available at <https://github.com/zakkak/turnin>\n",
 	        turninversion);
-	exit(1);
+	exit(0);
 }
 
 
