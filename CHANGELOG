@@ -1,10 +1,11 @@
 CHANGELOG:
 
-2022-10-22 Alexandros K. Antonakakis <antonakakis1@gmail.com>
+2022-10-28 Alexandros K. Antonakakis <antonakakis1@gmail.com>
    - Improve error messages on setuid for class and user
    - Fix potential NULL pointer dereference on pw_name
    - Replace localtime with localtime_r
    - Fix potential NULL pointer dereference on localtime_r
+   - Add .clang-formatt and .editorconfig files
    - Release v3.1.6
 
 2022-04-18 Foivos S. Zakkak <foivos@zakkak.net>
