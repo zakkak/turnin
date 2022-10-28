@@ -2,6 +2,8 @@ CHANGELOG:
 
 2022-10-28 Foivos S. Zakkak <foivos@zakkak.net>
    - Adding a simple github workflow for testing the repository
+   - Return 0 when exiting from `turnin --version`
+
 2022-04-18 Foivos S. Zakkak <foivos@zakkak.net>
    - Exit turnin on EOF to avoid infinite loops in case of
      redirection from wrongly formatted files or dropped ssh sessions
