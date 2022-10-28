@@ -1383,7 +1383,7 @@ void checkdue() {
 	res = localtime_r(&curr_time, &tm_curr);
 	if (!res) {
 		fprintf(stderr,	
-				"turnin: Cannot create timestamp\n"
+				"turnin: Cannot create timestamp to calculate initial penalty\n"
 				"        Please report this issue to the system administrators\n");
 		exit(1);
 	}
@@ -1394,7 +1394,7 @@ void checkdue() {
 		res = localtime_r(&curr_time, &tm_curr);
 		if (!res) {
 			fprintf(stderr,
-							"turnin: Cannot create timestamp\n"
+							"turnin: Cannot create timestamp to calculate additional penalty\n"
 							"        Please report this issue to the system administrators\n");
 			exit(1);
 			}
