@@ -1,0 +1,39 @@
+name: turnin test suite
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'Makefile'
+      - '.github/workflows/main.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'Makefile'
+      - '.github/workflows/main.yml'
+
+env:
+  COURSE: hy999
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: sudo make install
+      - run: turnin --version
+      - name: Create user for course
+        run: |
+          sudo useradd -m $COURSE
+          grep $COURSE /etc/passwd
+      - name: Create TURNIN directory for new user
+        run: sudo -u $COURSE mkdir -p /home/$COURSE/TURNIN/ex1
+      - name: Turn something in
+        run: |
+          whoami
+          turnin ex1@$COURSE src/turnin.c < <(echo "y")
+      - name: Verify turn in
+        run: |
+          verify-turnin ex1@$COURSE
+          sudo -u $COURSE find /home/$COURSE/TURNIN/ex1/
+          sudo -u $COURSE find /home/$COURSE/TURNIN/ex1/ | grep `whoami` > /dev/null
