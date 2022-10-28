@@ -1463,6 +1463,8 @@ int main(int argc, char* argv[]) {
 	ignore_signal(SIGTTIN);
 	ignore_signal(SIGTTOU);
 
+	/* initialize tzname before creating timestamps */
+  tzset();
 	setup(argv[1]);
 
 	checkdue();
