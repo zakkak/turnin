@@ -31,7 +31,7 @@ jobs:
       - name: Turn something in
         run: |
           whoami
-          turnin ex1@$COURSE src/turnin.c < <(echo "y")
+          yes | turnin ex1@$COURSE src/turnin.c
       - name: Verify turn in
         run: |
           verify-turnin ex1@$COURSE
