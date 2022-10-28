@@ -1512,6 +1512,8 @@ int main(int argc, char *argv[]) {
 
   setup(argv[1]);
 
+  /* initialize tzname before creating timestamps */
+  tzset();
   checkdue();
 
   argv += 2;
