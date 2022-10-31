@@ -66,20 +66,20 @@
 
 #define _DEFAULT_SOURCE
 #define _XOPEN_SOURCE
+#include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
+#include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <ctype.h>
-#include <pwd.h>
-#include <unistd.h>
-#include <dirent.h>
 #include <time.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <errno.h>
+#include <unistd.h>
 
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 
@@ -93,27 +93,27 @@
 
 #define MAX_PATH_LENGTH 4096
 
-char         *user_name;
-char         *assignment, *class;
+char        *user_name;
+char        *assignment, *class;
 unsigned int class_uid, user_uid, class_gid, user_gid;
 
-int maxfiles       =  100;
+int maxfiles       = 100;
 int maxkbytes      = 1000;
-int maxturnins     =   10;
-int binary         =    0;
-int daypenalty     =   10;
-int weekendpenalty =    5;
+int maxturnins     = 10;
+int binary         = 0;
+int daypenalty     = 10;
+int weekendpenalty = 5;
 
 int penalty = 0;
 
-time_t duedate = 0;
+time_t duedate  = 0;
 time_t lockdate = 0;
 
 int nfiles, nkbytes, nsymlinks;
 
 char *assignment_path, *assignment_file;
 char *assignment_path_files[] = {"on_time", "late"};
-int saveturnin = 1;
+int   saveturnin              = 1;
 #define MAX_FILENAME_LENGTH 256
 
 char *tarcmd;
@@ -159,7 +159,8 @@ void usage() {
  * get arguments: assignment, class, list of files-and-directories
  */
 void version() {
-	fprintf(stderr, "turnin %s\n\n"
+	fprintf(stderr,
+	        "turnin %s\n\n"
 	        "Copyright 1993      Paul Eggert\n"
 	        "Copyright 1993      Dave Probert     <probert@cs.ucsb.edu>\n"
 	        "Copyright 2000      Andy Pippin      <abp@cs.ucsb.edu>\n"
@@ -176,42 +177,32 @@ void version() {
 	exit(0);
 }
 
-
 /*
  * Checks path for malicious tricks, such as escaped backspaces etc.
  *
  * FIXME: Only supports a subset of ASCII at the moment
  */
-void check_assignment(char* s){
-	if (*s=='/') {
-		fprintf(stderr,
-		        "turnin: The assignment cannot be an absolute path.\n"
-		        "        Please ask for help.\n");
+void check_assignment(char *s) {
+	if (*s == '/') {
+		fprintf(stderr, "turnin: The assignment cannot be an absolute path.\n"
+		                "        Please ask for help.\n");
 		exit(1);
 	}
 
-
 	for (; *s; s++) {
-		if ( !( (*s == ' ') ||
-		        (*s == '_') ||
-		        (*s == '-') ||
-		        (*s == '/') ||
-		        ((*s >= '0') && (*s <= '9')) ||
-		        ((*s >= 'a') && (*s <= 'z')) ||
-		        ((*s >= 'A') && (*s <= 'Z')) ) ) {
-			fprintf(stderr,
-			        "turnin: An assignment can include only ascii characters in [a-zA-Z0-9 /_-]\n");
+		if (!((*s == ' ') || (*s == '_') || (*s == '-') || (*s == '/') || ((*s >= '0') && (*s <= '9')) ||
+		      ((*s >= 'a') && (*s <= 'z')) || ((*s >= 'A') && (*s <= 'Z')))) {
+			fprintf(stderr, "turnin: An assignment can include only ascii characters in [a-zA-Z0-9 /_-]\n");
 			exit(1);
 		}
 	}
 }
 
-char * timestamp(time_t clock) {
-	char *b = (char *) malloc(16);
+char *timestamp(time_t clock) {
+	char      *b = (char *)malloc(16);
 	struct tm *t = localtime(&clock);
 
-	sprintf(b, "%02d/%02d/%02d %02d:%02d", t->tm_mon+1, t->tm_mday, t->tm_year % 100,
-	        t->tm_hour, t->tm_min);
+	sprintf(b, "%02d/%02d/%02d %02d:%02d", t->tm_mon + 1, t->tm_mday, t->tm_year % 100, t->tm_hour, t->tm_min);
 	return b;
 }
 
@@ -221,12 +212,12 @@ void be_class() {
 		exit(1);
 	}
 
-	if( setegid(0) != 0 ){
+	if (setegid(0) != 0) {
 		perror("setegid root");
 		exit(1);
 	}
 
-	if ( setegid(class_gid) == -1 ) {
+	if (setegid(class_gid) == -1) {
 		perror("setegid class");
 		exit(1);
 	}
@@ -242,12 +233,12 @@ void be_user() {
 		perror("seteuid root");
 		exit(1);
 	}
-	if ( setegid(0) == -1 ){
+	if (setegid(0) == -1) {
 		perror("setegid root");
 		exit(1);
 	}
 
-	if ( setegid(user_gid) == -1 ){
+	if (setegid(user_gid) == -1) {
 		perror("setegid user");
 		exit(1);
 	}
@@ -272,19 +263,14 @@ void wanttocontinue() {
 			 * formatted files */
 			fprintf(stderr, "\n**** ABORTING TURNIN - Input reached EOF ****\n");
 			exit(0);
-		case '\n':
-			continue;
-			break;
-		default:
-			c = tolower(c);
-			break;
+		case '\n': continue; break;
+		default: c = tolower(c); break;
 		}
 
 		/* Handle more than one characters, if more than one
 		 * characters was given ask again */
 		/* Get the rest of the input */
-		while( ( (t = getchar()) != '\n' ) &&
-		       ( t != EOF ) ) {
+		while (((t = getchar()) != '\n') && (t != EOF)) {
 			/* set c to something different than 'y' and 'n' */
 			c = 0;
 		}
@@ -306,9 +292,9 @@ void wanttocontinue() {
  */
 int find_longest_sub_path() {
 	unsigned int i;
-	int current, longest_path = 0;
+	int          current, longest_path = 0;
 
-	for (i = 0; i < sizeof(assignment_path_files)/sizeof(char*) ;i++) {
+	for (i = 0; i < sizeof(assignment_path_files) / sizeof(char *); i++) {
 		current = strlen(assignment_path_files[i]);
 		if (current > longest_path) {
 			longest_path = current;
@@ -319,11 +305,11 @@ int find_longest_sub_path() {
 }
 
 void check_submissions_paths() {
-	char *submissions_paths;
-	int longest_path = 0;
-	int path_len = 0;
+	char        *submissions_paths;
+	int          longest_path = 0;
+	int          path_len     = 0;
 	unsigned int i;
-	struct stat stat;
+	struct stat  stat;
 
 	/* find longest submissions path */
 	longest_path = find_longest_sub_path();
@@ -335,13 +321,13 @@ void check_submissions_paths() {
 
 	path_len = strlen(assignment_path) + longest_path + 2 + 2;
 
-	if ( path_len > (MAX_PATH_LENGTH - MAX_FILENAME_LENGTH) ) {
+	if (path_len > (MAX_PATH_LENGTH - MAX_FILENAME_LENGTH)) {
 		fprintf(stderr, "turnin: turnin path for submissions longer than %d\n", MAX_PATH_LENGTH);
 		exit(1);
 	}
 
-	for (i = 0; i < sizeof(assignment_path_files)/sizeof(char*); i++) {
-		submissions_paths = (char *)malloc( (path_len + MAX_FILENAME_LENGTH) * sizeof(char));
+	for (i = 0; i < sizeof(assignment_path_files) / sizeof(char *); i++) {
+		submissions_paths = (char *)malloc((path_len + MAX_FILENAME_LENGTH) * sizeof(char));
 		strncpy(submissions_paths, assignment_path, strlen(assignment_path) - 1); // -1 for traling '.'
 		submissions_paths[strlen(assignment_path) - 1] = '\0';
 		strcat(submissions_paths, assignment_path_files[i]);
@@ -349,8 +335,7 @@ void check_submissions_paths() {
 		/* Does it exist? */
 		if (lstat(submissions_paths, &stat) == -1) {
 			/* If not create them */
-			if (mkdir(submissions_paths,
-			          S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1) {
+			if (mkdir(submissions_paths, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1) {
 				fprintf(stderr,
 				        "turnin: Failed to create directory %s.\n"
 				        "        Please mention this to the instructor or the TAs.\n",
@@ -416,7 +401,7 @@ int check_date(char *str_date, time_t *t) {
 		return 0;
 
 	tm.tm_isdst = -1;
-	*t = mktime(&tm);
+	*t          = mktime(&tm);
 	if (*t == -1)
 		return 0;
 
@@ -425,9 +410,9 @@ int check_date(char *str_date, time_t *t) {
 
 void setup(char *arg) {
 	struct passwd *pwd;
-	struct stat stat;
-	char buf[256], *p;
-	FILE *fd;
+	struct stat    stat;
+	char           buf[256], *p;
+	FILE          *fd;
 
 	char keyword[256];
 	char str_date[32];
@@ -442,9 +427,8 @@ void setup(char *arg) {
 
 	/* Check if it was compiled/setup properly */
 	if (geteuid() != 0) {
-		fprintf(stderr,
-		        "turnin: turnin must be compiled and installed as root.\n"
-		        "        Please report this issue to the system administrators.\n");
+		fprintf(stderr, "turnin: turnin must be compiled and installed as root.\n"
+		                "        Please report this issue to the system administrators.\n");
 		exit(1);
 	}
 
@@ -456,19 +440,20 @@ void setup(char *arg) {
 	if (!pwd) {
 		fprintf(stderr,
 		        "turnin: Cannot lookup user (uid %d)\n"
-		        "        Please report this issue to the system administrators\n", user_uid);
+		        "        Please report this issue to the system administrators\n",
+		        user_uid);
 		exit(1);
 	}
 	user_name = strdup(pwd->pw_name);
 
 	/* Search for @ in the first argument and split it there */
 	assignment = arg;
-	class = strchr(assignment, '@');
+	class      = strchr(assignment, '@');
 
 	if (!class)
 		usage();
 
-	*class++ = '\0';
+	*class ++ = '\0';
 
 	/* check assignment to make sure it is a valid path */
 	check_assignment(assignment);
@@ -489,14 +474,14 @@ void setup(char *arg) {
 
 	/* assignment path is in the class' home directory */
 	/* plus 2 is for adding the '/' and '\0' */
-	i = strlen(pwd->pw_dir) + strlen("/TURNIN/")  + strlen(assignment) + 2;
+	i = strlen(pwd->pw_dir) + strlen("/TURNIN/") + strlen(assignment) + 2;
 
-	if ( i > (MAX_PATH_LENGTH - MAX_FILENAME_LENGTH) ) {
+	if (i > (MAX_PATH_LENGTH - MAX_FILENAME_LENGTH)) {
 		fprintf(stderr, "turnin: turnin path longer than %d\n", MAX_PATH_LENGTH);
 		exit(1);
 	}
 
-	if ( assignment[0] == '\0' ){
+	if (assignment[0] == '\0') {
 		fprintf(stderr, "turnin: assignment name cannot be empty\n");
 		exit(1);
 	}
@@ -514,9 +499,8 @@ void setup(char *arg) {
 	if (access("/bin/tar", X_OK) == 0)
 		tarcmd = "/bin/tar";
 	else {
-		fprintf(stderr,
-		        "turnin: Cannot find tar command\n"
-		        "        Please mention this to the system administrators\n");
+		fprintf(stderr, "turnin: Cannot find tar command\n"
+		                "        Please mention this to the system administrators\n");
 		exit(1);
 	}
 
@@ -569,9 +553,9 @@ void setup(char *arg) {
 	strcpy(assignment_file, "LIMITS");
 	fd = fopen(assignment_path, "r");
 	if (fd) {
-		while (fgets(buf, sizeof(buf)-1, fd) == buf) {
+		while (fgets(buf, sizeof(buf) - 1, fd) == buf) {
 			/* Ignore comments */
-			if ( (p = strchr(buf, '#')) )
+			if ((p = strchr(buf, '#')))
 				*p-- = 0;
 			else
 				p = buf + strlen(buf) - 1;
@@ -579,13 +563,14 @@ void setup(char *arg) {
 			while (p >= buf && isspace(*p))
 				--p;
 
-			if (p == buf-1)
+			if (p == buf - 1)
 				continue;
 
 			p[1] = 0; /* Remove trailing spaces */
 
 			/* Remove spaces from the start */
-			for (p = buf;  *p && isspace(*p);  p++) ;
+			for (p = buf; *p && isspace(*p); p++)
+				;
 
 			memset((void *)str_date, 0, sizeof(str_date));
 
@@ -593,50 +578,44 @@ void setup(char *arg) {
 			if (sscanf(buf, "%s %d", keyword, &n) != 2) {
 				warn = 1;
 			} else if (strcasecmp(keyword, "maxfiles") == 0) {
-				if ( n<1 ) {
-					fprintf(stderr,
-					        "turnin: maxfiles in the LIMITS file must be a non-zero positive value\n"
-					        "        Please notify the Instructor or a TA.\n");
+				if (n < 1) {
+					fprintf(stderr, "turnin: maxfiles in the LIMITS file must be a non-zero positive value\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				maxfiles = n;
 			} else if (strcasecmp(keyword, "maxkbytes") == 0) {
-				if ( n<1 ) {
-					fprintf(stderr,
-					        "turnin: maxkbytes in the LIMITS file must be a non-zero positive value\n"
-					        "        Please notify the Instructor or a TA.\n");
+				if (n < 1) {
+					fprintf(stderr, "turnin: maxkbytes in the LIMITS file must be a non-zero positive value\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				maxkbytes = n;
 			} else if (strcasecmp(keyword, "maxturnins") == 0) {
-				if ( n<1 ) {
-					fprintf(stderr,
-					        "turnin: maxturnins in the LIMITS file must be a non-zero positive value\n"
-					        "        Please notify the Instructor or a TA.\n");
+				if (n < 1) {
+					fprintf(stderr, "turnin: maxturnins in the LIMITS file must be a non-zero positive value\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				maxturnins = n;
 			} else if (strcasecmp(keyword, "binary") == 0) {
-				if ( (n!=0) && (n!=1) ) {
-					fprintf(stderr,
-					        "turnin: binary in the LIMITS file can only be 1 or 0\n"
-					        "        Please notify the Instructor or a TA.\n");
+				if ((n != 0) && (n != 1)) {
+					fprintf(stderr, "turnin: binary in the LIMITS file can only be 1 or 0\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				binary = n;
 			} else if (strcasecmp(keyword, "daypenalty") == 0) {
-				if ( n < 0 || n > 100 ) {
-					fprintf(stderr,
-					        "turnin: daypenalty in the LIMITS file must be a positive value - (0 < penalty < 100)\n"
-					        "        Please notify the Instructor or a TA.\n");
+				if (n < 0 || n > 100) {
+					fprintf(stderr, "turnin: daypenalty in the LIMITS file must be a positive value - (0 < penalty < 100)\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				daypenalty = n;
 			} else if (strcasecmp(keyword, "weekendpenalty") == 0) {
-				if ( n < 0 || n > 100 ) {
-					fprintf(stderr,
-					        "turnin: weekendpenalty in the LIMITS file must be a positive value - (0 < penalty < 100)\n"
-					        "        Please notify the Instructor or a TA.\n");
+				if (n < 0 || n > 100) {
+					fprintf(stderr, "turnin: weekendpenalty in the LIMITS file must be a positive value - (0 < penalty < 100)\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 				weekendpenalty = n;
@@ -644,30 +623,27 @@ void setup(char *arg) {
 				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
 					warn = 1;
 				} else if (!check_date(str_date, &duedate)) {
-					fprintf(stderr,
-					        "turnin: duedate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
-					        "        Please notify the Instructor or a TA.\n");
+					fprintf(stderr, "turnin: duedate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 			} else if (strcasecmp(keyword, "lockdate") == 0) {
 				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
 					warn = 1;
 				} else if (!check_date(str_date, &lockdate)) {
-					fprintf(stderr,
-					        "turnin: lockdate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
-					        "        Please notify the Instructor or a TA.\n");
+					fprintf(stderr, "turnin: lockdate in the LIMITS file must be a YYYYMMDD HH:MM format\n"
+					                "        Please notify the Instructor or a TA.\n");
 					exit(1);
 				}
 			} else {
 				warn = 1;
 			}
 			if (warn) {
-				fprintf(stderr,
-				        "turnin: Could not parse LIMITS file\n"
-				        "        This is harmless, but please mention to instructor\n");
+				fprintf(stderr, "turnin: Could not parse LIMITS file\n"
+				                "        This is harmless, but please mention to instructor\n");
 			}
 		}
-		(void) fclose(fd);
+		(void)fclose(fd);
 	}
 
 	/* Check if the assignment is locked */
@@ -697,7 +673,7 @@ void setup(char *arg) {
 			putchar(c);
 		}
 		fprintf(stderr, "*************************************\n");
-		(void) fclose(fd);
+		(void)fclose(fd);
 		wanttocontinue();
 	}
 
@@ -709,28 +685,29 @@ void setup(char *arg) {
 
 	if (lstat(assignment_path, &stat) != -1) {
 		/* compute next version name */
-		for (saveturnin = 1;  saveturnin <= maxturnins;  saveturnin++) {
+		for (saveturnin = 1; saveturnin <= maxturnins; saveturnin++) {
 			file_exists = 1;
 
 			sprintf(assignment_file, "{on_time,late}/%s-%d{,-*}.tgz", user_name, saveturnin);
 			glob(assignment_path, GLOB_BRACE, NULL, &glob_buffer);
-			if (glob_buffer.gl_pathc == 0) file_exists = 0;
+			if (glob_buffer.gl_pathc == 0)
+				file_exists = 0;
 			globfree(&glob_buffer);
 
-			if (!file_exists) break;
+			if (!file_exists)
+				break;
 		}
 
 		if (saveturnin > maxturnins) {
-			fprintf(stderr, "\n*** MAX (%d) TURNINS REACHED FOR %s ***\n",
-			        maxturnins, assignment);
+			fprintf(stderr, "\n*** MAX (%d) TURNINS REACHED FOR %s ***\n", maxturnins, assignment);
 			fprintf(stderr, "\n**** ABORTING TURNIN ****\n");
 			exit(1);
 		} else {
-			fprintf(stderr, "\n"
+			fprintf(stderr,
+			        "\n"
 			        "*** You have already turned in %s ***\n"
 			        "    You have %d more turnins!\n",
-			        assignment,
-			        maxturnins-saveturnin+1);
+			        assignment, maxturnins - saveturnin + 1);
 		}
 
 		wanttocontinue();
@@ -740,21 +717,28 @@ void setup(char *arg) {
 }
 
 int isbinaryfile(char *s) {
-	char buf[256];
+	char  buf[256];
 	char *p;
-	int n, f, c;
+	int   n, f, c;
 
 	f = open(s, 0);
-	if (f == -1) {perror(s); exit(1);}
+	if (f == -1) {
+		perror(s);
+		exit(1);
+	}
 
 	n = read(f, buf, sizeof(buf));
-	if (n == -1) {perror(s); exit(1);}
-	(void) close(f);
+	if (n == -1) {
+		perror(s);
+		exit(1);
+	}
+	(void)close(f);
 
 	p = buf;
 	while (n-- > 0) {
 		c = *p++ & 0xff;
-		if (c == 0) return 1;
+		if (c == 0)
+			return 1;
 		/* The following works only for ascii. Not valid for
 		 * unicode */
 		/* if (c & 0x80) return 1; */
@@ -764,18 +748,18 @@ int isbinaryfile(char *s) {
 }
 
 void addfile(char *s) {
-	struct stat stat;
+	struct stat    stat;
 	struct dirent *dp;
-	DIR *dirp;
-	Fdescr *f;
-	char b[MAX_PATH_LENGTH];
-	char *p, *t;
-	int sl, i;
-	int must_be_dir;
-	char *tmp;
+	DIR           *dirp;
+	Fdescr        *f;
+	char           b[MAX_PATH_LENGTH];
+	char          *p, *t;
+	int            sl, i;
+	int            must_be_dir;
+	char          *tmp;
 
 	/* FIXME: these are never freed */
-	f = (Fdescr *) malloc(sizeof(Fdescr));
+	f = (Fdescr *)malloc(sizeof(Fdescr));
 	memset((void *)f, 0, sizeof(Fdescr));
 
 	sl = strlen(s);
@@ -784,13 +768,13 @@ void addfile(char *s) {
 		fileroot = filenext = f;
 	} else {
 		filenext->f_link = f;
-		filenext = f;
+		filenext         = f;
 	}
 
 	must_be_dir = 0;
 	/* Eat trailing slashes from directories */
-	while (sl > 1 && s[sl-1] == '/') {
-		s[sl-1] = 0;
+	while (sl > 1 && s[sl - 1] == '/') {
+		s[sl - 1] = 0;
 		sl--;
 		must_be_dir = 1;
 	}
@@ -805,7 +789,7 @@ void addfile(char *s) {
 
 	/* Ignore hidden files or directories */
 	tmp = strrchr(s, '/');
-	if ( tmp && (strchr(tmp, '.') == (tmp+1)) ) {
+	if (tmp && (strchr(tmp, '.') == (tmp + 1))) {
 		f->f_flag = F_HIDDEN;
 		return;
 	}
@@ -827,17 +811,16 @@ void addfile(char *s) {
 		if ((stat.st_mode & S_IRUSR) != S_IRUSR)
 			f->f_flag = F_PERM;
 		else if (isbinaryfile(s))
-			if ( binary ) {
-				f->f_flag = F_OK;
+			if (binary) {
+				f->f_flag  = F_OK;
 				f->f_mtime = stat.st_mtime;
-				f->f_size = stat.st_size;
-			}
-			else
+				f->f_size  = stat.st_size;
+			} else
 				f->f_flag = F_BINFILE;
 		else {
 			f->f_mtime = stat.st_mtime;
-			f->f_size = stat.st_size;
-			f->f_flag = F_OK;
+			f->f_size  = stat.st_size;
+			f->f_flag  = F_OK;
 		}
 		return;
 	}
@@ -854,7 +837,7 @@ void addfile(char *s) {
 			exit(1);
 		}
 
-		f->f_flag = F_SYMLINK;
+		f->f_flag    = F_SYMLINK;
 		f->f_symlink = strdup(b);
 		return;
 	}
@@ -867,18 +850,17 @@ void addfile(char *s) {
 
 	f->f_flag = F_DIRECTORY;
 
-
 	dirp = opendir(s);
 	if (!dirp) {
 		f->f_flag = F_NOTDIR;
 		return;
 	}
 
-	while ( (dp = readdir(dirp)) != NULL ) {
+	while ((dp = readdir(dirp)) != NULL) {
 		p = dp->d_name;
 		/* Ignore . and .. */
 		if (!(strcmp(p, ".") == 0) && !(strcmp(p, "..") == 0)) {
-			i =  sl + 1 + strlen(p) + 1;
+			i = sl + 1 + strlen(p) + 1;
 			t = (char *)malloc(i);
 			strcpy(t, s);
 			strcat(t, "/");
@@ -888,7 +870,7 @@ void addfile(char *s) {
 		}
 	}
 
-	(void) closedir(dirp);
+	(void)closedir(dirp);
 }
 
 /*
@@ -897,27 +879,26 @@ void addfile(char *s) {
  */
 int warn_excludedfiles() {
 	Fdescr *fp;
-	char *msg = 0;
-	int first = 1;
+	char   *msg   = 0;
+	int     first = 1;
 
-	for (fp = fileroot;  fp;  fp = fp->f_link) {
+	for (fp = fileroot; fp; fp = fp->f_link) {
 		switch (fp->f_flag) {
-		case F_NOTFILE:  msg = "not a file, directory, or symlink"; break;
-		case F_BINFILE:  msg = "binary file"; break;
-		case F_TMPFILE:  msg = "temporary file"; break;
-		case F_HIDDEN:   msg = "hidden file or directory"; break;
+		case F_NOTFILE: msg = "not a file, directory, or symlink"; break;
+		case F_BINFILE: msg = "binary file"; break;
+		case F_TMPFILE: msg = "temporary file"; break;
+		case F_HIDDEN: msg = "hidden file or directory"; break;
 		case F_NOTOWNER: msg = "not owned by user"; break;
-		case F_DOTDOT:   msg = "pathname contained '..'"; break;
-		case F_ROOTED:   msg = "only relative pathnames allowed"; break;
-		case F_NOEXIST:  msg = "does not exist"; break;
+		case F_DOTDOT: msg = "pathname contained '..'"; break;
+		case F_ROOTED: msg = "only relative pathnames allowed"; break;
+		case F_NOEXIST: msg = "does not exist"; break;
 		case F_COREFILE: msg = "may not turnin core files"; break;
-		case F_PERM:     msg = "no access permissions"; break;
-		case F_NOTDIR:   msg = "error reading directory"; break;
-		case F_DIRECTORY:msg = 0; break;
-		case F_SYMLINK:  msg = 0; break;
-		case F_OK:		 msg = 0; break;
-		default:
-			fprintf(stderr, "turnin: INTERNAL ERROR: %d f_flag UNKNOWN\n", fp->f_flag);
+		case F_PERM: msg = "no access permissions"; break;
+		case F_NOTDIR: msg = "error reading directory"; break;
+		case F_DIRECTORY: msg = 0; break;
+		case F_SYMLINK: msg = 0; break;
+		case F_OK: msg = 0; break;
+		default: fprintf(stderr, "turnin: INTERNAL ERROR: %d f_flag UNKNOWN\n", fp->f_flag);
 		}
 		if (msg) {
 			if (first) {
@@ -936,14 +917,14 @@ int warn_excludedfiles() {
  */
 int computesummaryinfo() {
 	Fdescr *fp;
-	int fatal = 0;
+	int     fatal = 0;
 
-	for (fp = fileroot;  fp;  fp = fp->f_link) {
+	for (fp = fileroot; fp; fp = fp->f_link) {
 		if (fp->f_flag == F_SYMLINK)
 			nsymlinks++;
 		else if (fp->f_flag == F_OK) {
 			nfiles++;
-			nkbytes = nkbytes + (fp->f_size+1023)/1024;
+			nkbytes = nkbytes + (fp->f_size + 1023) / 1024;
 		}
 	}
 
@@ -951,8 +932,7 @@ int computesummaryinfo() {
 		fprintf(stderr,
 		        "turnin: A maximum of %d files may be turned in for this assignment.\n"
 		        "        You are attempting to turn in %d files.\n",
-		        maxfiles,
-		        nfiles);
+		        maxfiles, nfiles);
 		fatal++;
 	}
 
@@ -960,14 +940,12 @@ int computesummaryinfo() {
 		fprintf(stderr,
 		        "turnin: A maximum of %d Kbytes may be turned in for this assignment.\n"
 		        "        You are attempting to turn in %d Kbytes.\n",
-		        maxkbytes,
-		        nkbytes);
+		        maxkbytes, nkbytes);
 		fatal++;
 	}
 
 	return fatal;
 }
-
 
 /*
  * For each file that will actually be turned in, print the
@@ -976,31 +954,31 @@ int computesummaryinfo() {
  */
 void printverifylist() {
 	Fdescr *f;
-	int n = 0;
-	char *msg[2];
-	char *time;
+	int     n = 0;
+	char   *msg[2];
+	char   *time;
 
 	fprintf(stderr, "\n*** These are the regular files being turned in:\n\n");
 	fprintf(stderr, "\t    Last Modified   Size   Filename\n");
 	fprintf(stderr, "\t    -------------- ------  -------------------------\n");
 
-	for (f = fileroot;  f;  f = f->f_link) {
+	for (f = fileroot; f; f = f->f_link) {
 		if (f->f_flag != F_OK)
 			continue;
 		n++;
 		time = timestamp(f->f_mtime);
-		fprintf(stderr, "\t%2d: %s %6u  %s\n",
-		        n, time, (unsigned int)f->f_size, f->f_name);
+		fprintf(stderr, "\t%2d: %s %6u  %s\n", n, time, (unsigned int)f->f_size, f->f_name);
 		free(time);
 	}
 
 	msg[0] = "\nThese are the symbolic links being turned in:\n";
 	msg[1] = "(Be sure the files referenced are turned in too)\n";
 
-	for (f = fileroot;  f;  f = f->f_link) {
+	for (f = fileroot; f; f = f->f_link) {
 		if (f->f_flag != F_SYMLINK)
 			continue;
-		if (msg[0]) fprintf(stderr, "%s%s", msg[0], msg[1]);
+		if (msg[0])
+			fprintf(stderr, "%s%s", msg[0], msg[1]);
 		msg[0] = 0;
 		n++;
 		fprintf(stderr, "\t%2d: %s -> %s\n", n, f->f_name, f->f_symlink);
@@ -1018,32 +996,32 @@ char *tempfile;
  * Creates the archive and a link to it.
  */
 void maketar() {
-	int ofd;
-	int childpid, childstat;
-	int tarpid, tarstat;
-	int failed;
+	int         ofd;
+	int         childpid, childstat;
+	int         tarpid, tarstat;
+	int         failed;
 	struct stat stat;
 
 	char **targvp, **tvp;
-	int nleft;
-	char *target;
+	int    nleft;
+	char  *target;
 
 	Fdescr *fp;
 
 	/*
 	 * build the tar argument list
 	 */
-	tvp = targvp = (char **) malloc((5+nfiles+nsymlinks+1)*sizeof(char *));
-	tvp[0] = "tar";
-	tvp[1] = "czf";
-	tvp[2] = "-";
-	tvp[3] = "--exclude-backups";
-	tvp[4] = "--exclude-vcs";
+	tvp = targvp = (char **)malloc((5 + nfiles + nsymlinks + 1) * sizeof(char *));
+	tvp[0]       = "tar";
+	tvp[1]       = "czf";
+	tvp[2]       = "-";
+	tvp[3]       = "--exclude-backups";
+	tvp[4]       = "--exclude-vcs";
 	tvp += 5;
 
 	nleft = nfiles + nsymlinks;
 
-	for (fp = fileroot;  fp;  fp = fp->f_link) {
+	for (fp = fileroot; fp; fp = fp->f_link) {
 		if (fp->f_flag != F_OK && fp->f_flag != F_SYMLINK)
 			continue;
 		if (nleft-- < 0) {
@@ -1053,7 +1031,6 @@ void maketar() {
 		*tvp++ = fp->f_name;
 	}
 	*tvp = 0;
-
 
 	/*
 	 * setup the target name
@@ -1073,7 +1050,7 @@ void maketar() {
 		exit(1);
 	}
 
-	ofd = open(assignment_path, O_CREAT|O_EXCL|O_WRONLY, 0600);
+	ofd = open(assignment_path, O_CREAT | O_EXCL | O_WRONLY, 0600);
 
 	if (ofd == -1) {
 		perror(assignment_path);
@@ -1090,16 +1067,16 @@ void maketar() {
 	/*
 	 * Do the actual tar
 	 */
-	failed = 0;
+	failed   = 0;
 	childpid = fork();
 
-	if (!childpid) {	/* in child */
+	if (!childpid) { /* in child */
 
 		tarpid = fork();
 		if (!tarpid) {
 			if (ofd != 1) {
 				dup2(ofd, 1);
-				(void) close(ofd);
+				(void)close(ofd);
 			}
 			execv(tarcmd, targvp);
 			perror("tarcmd");
@@ -1107,7 +1084,8 @@ void maketar() {
 		}
 
 		wait(&tarstat);
-		if (tarstat) failed = -1;
+		if (tarstat)
+			failed = -1;
 		_exit(failed);
 	}
 	wait(&childstat);
@@ -1119,21 +1097,20 @@ void maketar() {
 		        "turnin: Subprocesses returned FAILED status: %x\n"
 		        "        Contact the instructor or the TA\n",
 		        childstat);
-		(void) close(ofd);
+		(void)close(ofd);
 		if (lstat(assignment_path, &stat) != -1) {
 			unlink(assignment_path);
 		}
 		exit(1);
 	}
 
-	(void) close(ofd);
-
+	(void)close(ofd);
 
 	/* Create a symlink to the latest version */
 	/* 3 for penalty */
 	/* 8 for submission folder */
 	/* 9 for the letters and the '\0' + max possible digits of saveturnin */
-	target = malloc( (3+8+9+10+strlen(user_name))*sizeof(char) );
+	target = malloc((3 + 8 + 9 + 10 + strlen(user_name)) * sizeof(char));
 	if (penalty) {
 		sprintf(target, "./late/%s-%d-%d.tgz", user_name, saveturnin, penalty);
 	} else {
@@ -1144,38 +1121,33 @@ void maketar() {
 
 	be_class();
 
-	if ( symlink(target, assignment_path) != 0 ) {
+	if (symlink(target, assignment_path) != 0) {
 		if (errno == EEXIST) { /* If the link already exists remove it */
 			/* Check if it "really" exists */
 			if (lstat(assignment_path, &stat) == -1) {
-				fprintf(stderr,
-				        "turnin: Error while checking Symlink to latest turnin!\n"
-				        "        Please notify the Instructor or a TA.\n");
+				fprintf(stderr, "turnin: Error while checking Symlink to latest turnin!\n"
+				                "        Please notify the Instructor or a TA.\n");
 				exit(1);
 			} else if ((stat.st_mode & S_IFMT) != S_IFLNK) {
 				/* If it is not a symlink report an error */
-				fprintf(stderr,
-				        "turnin: Error with the symlink to the latest turnin!\n"
-				        "        Please notify the Instructor or a TA.\n");
+				fprintf(stderr, "turnin: Error with the symlink to the latest turnin!\n"
+				                "        Please notify the Instructor or a TA.\n");
 				exit(1);
 			} else if (unlink(assignment_path) != 0) {
-				fprintf(stderr,
-				        "turnin: Failed to delete symlink to latest turnin\n"
-				        "        Please notify the Instructor or a TA.\n");
+				fprintf(stderr, "turnin: Failed to delete symlink to latest turnin\n"
+				                "        Please notify the Instructor or a TA.\n");
 				perror("unlink");
 				exit(1);
-			/* after deletion retry */
-			} else if ( symlink(target, assignment_path) != 0 ) {
-				fprintf(stderr,
-				        "turnin: Failed to create symlink to latest turnin.\n"
-				        "        Please notify the Instructor or a TA.\n");
+				/* after deletion retry */
+			} else if (symlink(target, assignment_path) != 0) {
+				fprintf(stderr, "turnin: Failed to create symlink to latest turnin.\n"
+				                "        Please notify the Instructor or a TA.\n");
 				perror("symlink");
 				exit(1);
 			}
 		} else {
-			fprintf(stderr,
-			        "turnin: Failed to create symlink to latest turnin.\n"
-			        "        Please notify the Instructor or a TA.\n");
+			fprintf(stderr, "turnin: Failed to create symlink to latest turnin.\n"
+			                "        Please notify the Instructor or a TA.\n");
 			perror("symlink");
 			exit(1);
 		}
@@ -1189,11 +1161,11 @@ void maketar() {
 /*
  * Convert the sha digest to a string
  */
-char *sha2string (unsigned char sha[SHA256_DIGEST_LENGTH]) {
+char *sha2string(unsigned char sha[SHA256_DIGEST_LENGTH]) {
 	static char string[65]; /* Effectively global */
-	int i = 0;
+	int         i = 0;
 
-	for(i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+	for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
 		sprintf(string + (i * 2), "%02x", sha[i]);
 	}
 
@@ -1223,7 +1195,7 @@ char *calculate_sha(char *filename) {
 
 	SHA256_Init(&sha256);
 
-	while((rbytes = fread(buf, 1, 1024, fd))) {
+	while ((rbytes = fread(buf, 1, 1024, fd))) {
 		SHA256_Update(&sha256, buf, rbytes);
 	}
 
@@ -1240,7 +1212,7 @@ char *calculate_sha(char *filename) {
 char *getfilelog() {
 	char *log;
 	char *t;
-	int logl;
+	int   logl;
 
 	t = timestamp(time(0));
 
@@ -1251,11 +1223,8 @@ char *getfilelog() {
 	 * 1 for '\0'
 	 */
 	logl = 14 + strlen(turninversion) + 8 + 3 + strlen(t) + 3 + 1;
-	log  = malloc(logl*sizeof(char));
-	snprintf(log, logl,
-	         "turnin %s: %-8s-%3d %s %3d\n",
-	         turninversion, user_name, saveturnin, t,
-	         nfiles + nsymlinks);
+	log  = malloc(logl * sizeof(char));
+	snprintf(log, logl, "turnin %s: %-8s-%3d %s %3d\n", turninversion, user_name, saveturnin, t, nfiles + nsymlinks);
 
 	free(t);
 
@@ -1270,15 +1239,15 @@ char *getfilelog() {
  */
 void writelog() {
 	char *log;
-	char  sha[97];              /* 10 for the format string
-	                             * 64 for the sha256
-	                             * 8 for the username
-	                             * 10 for the number of turnins
-	                             * 3 for the penalty
-	                             * 1 for '\0'
-	                             * +1 to make it even
-	                             */
-	int   fd, x;
+	char  sha[97]; /* 10 for the format string
+	                * 64 for the sha256
+	                * 8 for the username
+	                * 10 for the number of turnins
+	                * 3 for the penalty
+	                * 1 for '\0'
+	                * +1 to make it even
+	                */
+	int fd, x;
 
 	log = getfilelog();
 
@@ -1286,52 +1255,54 @@ void writelog() {
 
 	if (penalty) {
 		sprintf(assignment_file, "late/%s-%d-%d.tgz", user_name, saveturnin, penalty);
-		snprintf(sha, 97,
-		         "%64s %8s-%d-%d.tgz\n",
-		         calculate_sha(assignment_path),
-		         user_name, saveturnin, penalty);
+		snprintf(sha, 97, "%64s %8s-%d-%d.tgz\n", calculate_sha(assignment_path), user_name, saveturnin, penalty);
 
 	} else {
 		sprintf(assignment_file, "on_time/%s-%d.tgz", user_name, saveturnin);
-		snprintf(sha, 94,
-		         "%64s %8s-%d.tgz\n",
-		         calculate_sha(assignment_path),
-		         user_name, saveturnin);
+		snprintf(sha, 94, "%64s %8s-%d.tgz\n", calculate_sha(assignment_path), user_name, saveturnin);
 	}
 	strcpy(assignment_file, "LOGFILE");
 
-	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
+	fd = open(assignment_path, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0600);
 	if (fd == -1) {
 		perror(assignment_path);
 		fprintf(stderr, "turnin Warning: Could not open assignment log file\n");
 	} else {
-		x = fsync(fd); if (x == -1) perror("fsync");
+		x = fsync(fd);
+		if (x == -1)
+			perror("fsync");
 
-		if ( write(fd, log, strlen(log)) == -1 ) {
+		if (write(fd, log, strlen(log)) == -1) {
 			fprintf(stderr, "turnin: Failed to write log");
 			exit(1);
 		}
 
-		x = fsync(fd); if (x == -1) perror("fsync");
-		(void) close(fd);
+		x = fsync(fd);
+		if (x == -1)
+			perror("fsync");
+		(void)close(fd);
 	}
 
 	strcpy(assignment_file, "SHA256");
 
-	fd = open(assignment_path, O_CREAT|O_WRONLY|O_APPEND|O_SYNC, 0600);
+	fd = open(assignment_path, O_CREAT | O_WRONLY | O_APPEND | O_SYNC, 0600);
 	if (fd == -1) {
 		perror(assignment_path);
 		fprintf(stderr, "turnin Warning: Could not open assignment sha256 file\n");
 	} else {
-		x = fsync(fd); if (x == -1) perror("fsync");
+		x = fsync(fd);
+		if (x == -1)
+			perror("fsync");
 
-		if ( write(fd, sha, strlen(sha)) == -1 ) {
+		if (write(fd, sha, strlen(sha)) == -1) {
 			fprintf(stderr, "turnin: Failed to write sha256");
 			exit(1);
 		}
 
-		x = fsync(fd); if (x == -1) perror("fsync");
-		(void) close(fd);
+		x = fsync(fd);
+		if (x == -1)
+			perror("fsync");
+		(void)close(fd);
 	}
 
 	be_user();
@@ -1340,18 +1311,20 @@ void writelog() {
 }
 
 void checkdue() {
-	FILE *fd;
+	FILE      *fd;
 	struct tm *tm_curr;
-	time_t curr_time;
-	double diff_time;
-	int diff_days;
+	time_t     curr_time;
+	double     diff_time;
+	int        diff_days;
 
 	curr_time = time(0);
 
 	/* Check if the assignment is due */
-	if (duedate == 0) return;
+	if (duedate == 0)
+		return;
 	diff_time = difftime(curr_time, duedate);
-	if (diff_time < 0) return;
+	if (diff_time < 0)
+		return;
 	// calculate different days
 	diff_days = (int)diff_time / 86400; // in days
 
@@ -1359,7 +1332,7 @@ void checkdue() {
 	tm_curr = localtime(&curr_time);
 	penalty += (tm_curr->tm_wday == 0 || tm_curr->tm_wday == 6) ? weekendpenalty : daypenalty;
 
-	for(;diff_days > 0;diff_days--) {
+	for (; diff_days > 0; diff_days--) {
 		curr_time -= 86400; // one day ago
 		tm_curr = localtime(&curr_time);
 
@@ -1384,11 +1357,9 @@ void checkdue() {
 			putchar(c);
 		}
 		fprintf(stderr, "******************************************\n");
-		(void) fclose(fd);
+		(void)fclose(fd);
 	}
-	fprintf(stderr,
-	        "\n*** This turn in will get %d%% penalty, due to late turn in, on the final grade ***\n",
-	        penalty);
+	fprintf(stderr, "\n*** This turn in will get %d%% penalty, due to late turn in, on the final grade ***\n", penalty);
 	wanttocontinue();
 }
 
@@ -1405,13 +1376,13 @@ void ignore_signal(int signum) {
 	}
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
 	if (argc > 1) {
-		if( strstr(argv[1], "-h") || strstr(argv[1], "--help"))
+		if (strstr(argv[1], "-h") || strstr(argv[1], "--help"))
 			usage();
 
-		if( strstr(argv[1], "-V") || strstr(argv[1], "--version"))
+		if (strstr(argv[1], "-V") || strstr(argv[1], "--version"))
 			version();
 
 		if (argc < 3)
@@ -1431,7 +1402,8 @@ int main(int argc, char* argv[]) {
 
 	checkdue();
 
-	argv += 2; argc -= 2;
+	argv += 2;
+	argc -= 2;
 	while (argc--)
 		addfile(*argv++);
 
@@ -1448,15 +1420,12 @@ int main(int argc, char* argv[]) {
 	fprintf(stderr, "\n*************************************");
 	fprintf(stderr, "***************************************\n\n");
 	if (nsymlinks) {
-		fprintf(stderr, "%s %d+%d (files+symlinks) [%dKB] for %s to %s\n",
-		        "You are about to turnin",
-		        nfiles, nsymlinks, nkbytes, assignment, class);
+		fprintf(stderr, "%s %d+%d (files+symlinks) [%dKB] for %s to %s\n", "You are about to turnin", nfiles, nsymlinks,
+		        nkbytes, assignment, class);
 	} else if (nfiles) {
-		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
-		        "You are about to turnin", nfiles, nkbytes, assignment, class);
+		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n", "You are about to turnin", nfiles, nkbytes, assignment, class);
 	} else { /* if there are no files to turnin */
-		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n",
-		        "You are about to turnin", nfiles, nkbytes, assignment, class);
+		fprintf(stderr, "%s %d files [%dKB] for %s to %s\n", "You are about to turnin", nfiles, nkbytes, assignment, class);
 		fprintf(stderr, "turnin is aborting this submission as it is empty\n");
 		exit(1);
 	}
@@ -1470,6 +1439,6 @@ int main(int argc, char* argv[]) {
 	/* Free memory */
 	free(assignment_path);
 
-	fprintf(stderr,"\n*** TURNIN OF %s TO %s COMPLETE! ***\n",assignment,class);
+	fprintf(stderr, "\n*** TURNIN OF %s TO %s COMPLETE! ***\n", assignment, class);
 	exit(0);
 }
