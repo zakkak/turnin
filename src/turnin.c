@@ -203,7 +203,7 @@ char *timestamp(time_t clock) {
 	struct tm  t;
 	struct tm *res = localtime_r(&clock, &t);
 
-	if (!res) {
+	if (res != &t) {
 		fprintf(stderr, "turnin: Cannot create timestamp\n"
 		                "        Please report this issue to the system administrators\n");
 		exit(1);
@@ -1346,7 +1346,7 @@ void checkdue() {
 
 	// calculate penalty
 	res = localtime_r(&curr_time, &tm_curr);
-	if (!res) {
+	if (res != &tm_curr) {
 		fprintf(stderr, "turnin: Cannot create timestamp to calculate initial penalty\n"
 		                "        Please report this issue to the system administrators\n");
 		exit(1);
@@ -1356,7 +1356,7 @@ void checkdue() {
 	for (; diff_days > 0; diff_days--) {
 		curr_time -= 86400; // one day ago
 		res = localtime_r(&curr_time, &tm_curr);
-		if (!res) {
+		if (res != &tm_curr) {
 			fprintf(stderr, "turnin: Cannot create timestamp to calculate additional penalty\n"
 			                "        Please report this issue to the system administrators\n");
 			exit(1);
