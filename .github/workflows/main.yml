@@ -3,14 +3,16 @@ name: turnin test suite
 on:
   push:
     paths:
-      - 'src/**'
-      - 'Makefile'
-      - '.github/workflows/main.yml'
+      - "src/**"
+      - "scripts/**"
+      - "Makefile"
+      - ".github/workflows/main.yml"
   pull_request:
     paths:
-      - 'src/**'
-      - 'Makefile'
-      - '.github/workflows/main.yml'
+      - "src/**"
+      - "scripts/**"
+      - "Makefile"
+      - ".github/workflows/main.yml"
 
 env:
   COURSE: hy999
@@ -27,7 +29,8 @@ jobs:
           sudo useradd -m $COURSE
           grep $COURSE /etc/passwd
       - name: Create TURNIN directory for new user
-        run: sudo -u $COURSE mkdir -p /home/$COURSE/TURNIN/ex1
+        run: |
+          sudo -u $COURSE mkdir -p /home/$COURSE/TURNIN/{ex1,ex2}
       - name: Turn something in
         run: |
           whoami
@@ -37,3 +40,6 @@ jobs:
           verify-turnin ex1@$COURSE
           sudo -u $COURSE find /home/$COURSE/TURNIN/ex1/
           sudo -u $COURSE find /home/$COURSE/TURNIN/ex1/ | grep `whoami` > /dev/null
+      - name: Verify turn in without submission
+        run: |
+          verify-turnin ex2@$COURSE || test $? -ne 0
