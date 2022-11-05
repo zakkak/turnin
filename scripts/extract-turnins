@@ -43,6 +43,7 @@ else
    suffix=''
 fi
 
+umask 077
 # Extract them
 for i in *.tgz
 do
