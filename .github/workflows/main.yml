@@ -49,3 +49,12 @@ jobs:
       - name: Verify turn in in non existing course
         run: |
           verify-turnin ex1@mycourse || test $? -ne 0
+      - name: Verify extract turn in permissions
+        run: |
+          set -x
+          cp scripts/extract-turnins /home/$COURSE/TURNIN/ex1
+          cd /home/$COURSE/TURNIN/ex1
+          sudo -u $COURSE ./extract-turnins
+          FILE_PERMS=$(sudo -u $COURSE stat -L -c "%a %G %U" /home/$COURSE/TURNIN/ex1/runner/src/turnin.c) #| sudo -u $COURSE grep -o "600")
+          echo "$FILE_PERMS"
+          [ "$FILE_PERMS" -eq 600 ] || test $? -eq 0
