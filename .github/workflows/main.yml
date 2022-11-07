@@ -43,3 +43,9 @@ jobs:
       - name: Verify turn in without submission
         run: |
           verify-turnin ex2@$COURSE || test $? -ne 0
+      - name: Verify turn in in non existing directory
+        run: |
+          verify-turnin ex3@$COURSE || test $? -ne 0
+      - name: Verify turn in in non existing course
+        run: |
+          verify-turnin ex1@mycourse || test $? -ne 0
