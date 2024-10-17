@@ -103,7 +103,7 @@ int maxturnins     = 10;
 int binary         = 0;
 int daypenalty     = 10;
 int weekendpenalty = 5;
-
+int showpenalty    = 1;
 int penalty = 0;
 
 time_t duedate  = 0;
@@ -168,7 +168,8 @@ void version() {
 	        "Copyright 2010-2014 Bryce Boe        <bboe@cs.ucsb.edu>\n"
 	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and\n"
 	        "                    Antonios Chariton<daknob.mac@gmail.com>\n"
-	        "Copyright 2015-2022 Foivos S. Zakkak <foivos@zakkak.net>\n\n"
+	        "Copyright 2015-2022 Foivos S. Zakkak <foivos@zakkak.net>\n"
+			"Copyright 2024 	 Paul Walther     <paul.walther@tum.de>\n\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
@@ -634,7 +635,15 @@ void setup(char *arg) {
 					exit(1);
 				}
 				weekendpenalty = n;
-			} else if (strcasecmp(keyword, "duedate") == 0) {
+			} else if (strcasecmp(keyword, "showpenalty") == 0) {
+				if ((n != 0) || (n != 1)) {
+					fprintf(stderr, "turnin: showpenalty must be either 0 or 1\n"
+					                "        Please notify the Instructor or a TA.\n");
+					exit(1);
+				}
+				showpenalty = n;
+			} 
+			else if (strcasecmp(keyword, "duedate") == 0) {
 				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
 					warn = 1;
 				} else if (!check_date(str_date, &duedate)) {
@@ -1385,7 +1394,9 @@ void checkdue() {
 		fprintf(stderr, "******************************************\n");
 		(void)fclose(fd);
 	}
-	fprintf(stderr, "\n*** This turn in will get %d%% penalty, due to late turn in, on the final grade ***\n", penalty);
+	if ((penalty > 0)&& (showpenalty)) {
+		fprintf(stderr, "\n*** This turn in will get %d%% penalty, due to late turn in, on the final grade ***\n", penalty);
+	}
 	wanttocontinue();
 }
 
