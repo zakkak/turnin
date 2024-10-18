@@ -642,8 +642,7 @@ void setup(char *arg) {
 					exit(1);
 				}
 				showpenalty = n;
-			} 
-			else if (strcasecmp(keyword, "duedate") == 0) {
+			} else if (strcasecmp(keyword, "duedate") == 0) {
 				if (sscanf(buf, "%s %14c", keyword, str_date) != 2) {
 					warn = 1;
 				} else if (!check_date(str_date, &duedate)) {
