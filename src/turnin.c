@@ -1394,7 +1394,7 @@ void checkdue() {
 		fprintf(stderr, "******************************************\n");
 		(void)fclose(fd);
 	}
-	if ((penalty > 0)&& (showpenalty)) {
+	if ((penalty > 0) && showpenalty) {
 		fprintf(stderr, "\n*** This turn in will get %d%% penalty, due to late turn in, on the final grade ***\n", penalty);
 	}
 	wanttocontinue();
