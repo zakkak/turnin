@@ -169,7 +169,7 @@ void version() {
 	        "Copyright 2014      Foivos S. Zakkak <foivos@zakkak.net> and\n"
 	        "                    Antonios Chariton<daknob.mac@gmail.com>\n"
 	        "Copyright 2015-2022 Foivos S. Zakkak <foivos@zakkak.net>\n"
-			"Copyright 2024 	 Paul Walther     <paul.walther@tum.de>\n\n"
+	        "Copyright 2024      Paul Walther     <paul.walther@tum.de>\n\n"
 	        "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n"
 	        "This is free software: you are free to change and redistribute it.\n"
 	        "There is NO WARRANTY, to the extent permitted by law.\n\n"
