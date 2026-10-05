@@ -117,6 +117,7 @@ int   saveturnin              = 1;
 #define MAX_FILENAME_LENGTH 256
 
 char *tarcmd;
+char *tarenv[] = {0};
 
 typedef struct fdescr {
 	char          *f_name;
@@ -144,6 +145,7 @@ typedef struct fdescr {
 #define F_DIRECTORY 11
 #define F_NOTDIR    12
 #define F_SYMLINK   13
+#define F_OPTION    14
 
 Fdescr *fileroot, *filenext;
 
@@ -771,6 +773,21 @@ int isbinaryfile(char *s) {
 	return 0;
 }
 
+int has_dotdot_component(char *s) {
+	char *component = s;
+	char *next;
+
+	while (component) {
+		next = strchr(component, '/');
+		if ((!next && strcmp(component, "..") == 0) ||
+		    (next && (next - component) == 2 && component[0] == '.' && component[1] == '.'))
+			return 1;
+		component = next ? next + 1 : 0;
+	}
+
+	return 0;
+}
+
 void addfile(char *s) {
 	struct stat    stat;
 	struct dirent *dp;
@@ -804,6 +821,21 @@ void addfile(char *s) {
 	}
 
 	f->f_name = strdup(s);
+
+	if (s[0] == '-') {
+		f->f_flag = F_OPTION;
+		return;
+	}
+
+	if (s[0] == '/') {
+		f->f_flag = F_ROOTED;
+		return;
+	}
+
+	if (has_dotdot_component(s)) {
+		f->f_flag = F_DOTDOT;
+		return;
+	}
 
 	/* Ignore core dumps */
 	if (strcmp(s, "core") == 0) {
@@ -919,6 +951,7 @@ int warn_excludedfiles() {
 		case F_COREFILE: msg = "may not turnin core files"; break;
 		case F_PERM: msg = "no access permissions"; break;
 		case F_NOTDIR: msg = "error reading directory"; break;
+		case F_OPTION: msg = "pathname begins with '-'"; break;
 		case F_DIRECTORY: msg = 0; break;
 		case F_SYMLINK: msg = 0; break;
 		case F_OK: msg = 0; break;
@@ -1035,13 +1068,14 @@ void maketar() {
 	/*
 	 * build the tar argument list
 	 */
-	tvp = targvp = (char **)malloc((5 + nfiles + nsymlinks + 1) * sizeof(char *));
+	tvp = targvp = (char **)malloc((6 + nfiles + nsymlinks + 1) * sizeof(char *));
 	tvp[0]       = "tar";
 	tvp[1]       = "czf";
 	tvp[2]       = "-";
 	tvp[3]       = "--exclude-backups";
 	tvp[4]       = "--exclude-vcs";
-	tvp += 5;
+	tvp[5]       = "--";
+	tvp += 6;
 
 	nleft = nfiles + nsymlinks;
 
@@ -1102,7 +1136,7 @@ void maketar() {
 				dup2(ofd, 1);
 				(void)close(ofd);
 			}
-			execv(tarcmd, targvp);
+			execve(tarcmd, targvp, tarenv);
 			perror("tarcmd");
 			_exit(1);
 		}

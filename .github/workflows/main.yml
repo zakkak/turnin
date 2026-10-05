@@ -54,6 +54,40 @@ jobs:
       - name: Verify turn in in non existing course
         run: |
           verify-turnin ex1@mycourse || test $? -ne 0
+      - name: Reject tar options supplied as submission filenames
+        run: |
+          set -euo pipefail
+
+          sudo useradd -m tarargcourse
+          sudo useradd -m tarargstudent
+          sudo install -d -m 0755 \
+            /home/tarargcourse/TURNIN/demo/on_time \
+            /home/tarargcourse/TURNIN/demo/late
+          sudo chown -R tarargcourse:tarargcourse /home/tarargcourse/TURNIN
+
+          sudo -u tarargstudent mkdir -p \
+            "/home/tarargstudent/payload/--index-file=/tmp/turnin-regression"
+          sudo -u tarargstudent touch \
+            /home/tarargstudent/payload/-v \
+            "/home/tarargstudent/payload/--index-file=/tmp/turnin-regression/proof" \
+            /home/tarargstudent/payload/controlled-content
+
+          # A student cannot create files in this directory.
+          sudo install -d -o root -g root -m 0770 /tmp/turnin-regression
+
+          sudo -u tarargstudent sh -c '
+            cd /home/tarargstudent/payload
+            printf "y\ny\n" |
+              /usr/bin/turnin demo@tarargcourse \
+                controlled-content \
+                -v \
+                --index-file=/tmp/turnin-regression/proof
+          '
+
+          if test -e /tmp/turnin-regression/proof; then
+            echo "tar interpreted a submission filename as an option" >&2
+            exit 1
+          fi
       - name: Reject files readable only by root group
         run: |
           protected_file=/tmp/turnin-root-group-secret
@@ -69,3 +103,20 @@ jobs:
           test "$status" -ne 0
           ! sudo -u $COURSE find /home/$COURSE/TURNIN/ex1 \
             -type f -name "$STUDENT-*.tgz" -print -quit | grep -q .
+      - name: Reject tar options supplied through TAR_OPTIONS
+        run: |
+          proof=/tmp/turnin-tar-options-proof
+          rm -f "$proof"
+
+          sudo -u "$STUDENT" env \
+            COURSE="$COURSE" \
+            TAR_OPTIONS="--index-file=$proof" \
+            sh -c '
+              cd "$HOME"
+              printf "submission\n" > submission.txt
+              printf "y\ny\n" | turnin "ex1@$COURSE" submission.txt
+            '
+          if test -e "$proof"; then
+            echo "tar honored TAR_OPTIONS from the submitter environment" >&2
+            exit 1
+          fi
