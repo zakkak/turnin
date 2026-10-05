@@ -442,6 +442,7 @@ void setup(char *arg) {
 
 	/* get the user's login */
 	user_uid = getuid();
+	user_gid = getgid();
 
 	pwd = getpwuid(user_uid);
 

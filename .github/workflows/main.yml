@@ -16,6 +16,7 @@ on:
 
 env:
   COURSE: hy999
+  STUDENT: submitter
 
 jobs:
   build-and-test:
@@ -30,6 +31,8 @@ jobs:
         run: |
           sudo useradd -m $COURSE
           grep $COURSE /etc/passwd
+      - name: Create unprivileged submitter
+        run: sudo useradd -m $STUDENT
       - name: Create TURNIN directory for new user
         run: |
           sudo -u $COURSE mkdir -p /home/$COURSE/TURNIN/{ex1,ex2}
@@ -51,3 +54,18 @@ jobs:
       - name: Verify turn in in non existing course
         run: |
           verify-turnin ex1@mycourse || test $? -ne 0
+      - name: Reject files readable only by root group
+        run: |
+          protected_file=/tmp/turnin-root-group-secret
+          printf 'confidential\n' | sudo tee "$protected_file" > /dev/null
+          sudo chown root:root "$protected_file"
+          sudo chmod 0640 "$protected_file"
+
+          set +e
+          yes | sudo -u $STUDENT turnin ex1@$COURSE "$protected_file"
+          status=${PIPESTATUS[1]}
+          set -e
+
+          test "$status" -ne 0
+          ! sudo -u $COURSE find /home/$COURSE/TURNIN/ex1 \
+            -type f -name "$STUDENT-*.tgz" -print -quit | grep -q .
